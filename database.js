@@ -112,7 +112,7 @@ db.exec(`
     name TEXT NOT NULL,
     description TEXT,
     price INTEGER NOT NULL,
-    item_type TEXT NOT NULL CHECK(item_type IN ('avatar_skin', 'avatar_hat', 'avatar_accessory', 'avatar_background', 'avatar_head', 'cool_design_centicool', 'cool_design_decicool', 'cool_design_cool', 'cool_design_supercool', 'cool_design_megacool', 'special')),
+    item_type TEXT NOT NULL CHECK(item_type IN ('avatar_skin', 'avatar_hat', 'avatar_accessory', 'avatar_background', 'avatar_head', 'avatar_border', 'cool_design_centicool', 'cool_design_decicool', 'cool_design_cool', 'cool_design_supercool', 'cool_design_megacool', 'special')),
     item_data TEXT DEFAULT '{}',
     is_available INTEGER DEFAULT 1,
     FOREIGN KEY (category_id) REFERENCES shop_categories(id)
