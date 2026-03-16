@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>COOL School Bank - La HERSE</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ANIMATION HERSE D'INTRO -->
+  <div id="herse-intro" class="herse-overlay">
+    <div class="herse-gate" id="herse-gate">
+      <!-- Barre du haut (support) -->
+      <div class="herse-top-bar"></div>
+      <!-- Barreaux verticaux -->
+      <div class="herse-bars">
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+        <div class="herse-bar"></div>
+      </div>
+      <!-- Barres horizontales -->
+      <div class="herse-cross herse-cross-1"></div>
+      <div class="herse-cross herse-cross-2"></div>
+      <div class="herse-cross herse-cross-3"></div>
+      <div class="herse-cross herse-cross-4"></div>
+      <!-- Pointes en bas -->
+      <div class="herse-spikes">
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+        <div class="herse-spike"></div>
+      </div>
+    </div>
+    <!-- Texte centré derrière la herse -->
+    <div class="herse-title" id="herse-title">
+      <div class="herse-logo">🏰</div>
+      <div class="herse-name">La HERSE</div>
+      <div class="herse-sub">COOL BANK</div>
+    </div>
+    <!-- Murs de pierre de chaque côté -->
+    <div class="herse-wall herse-wall-left"></div>
+    <div class="herse-wall herse-wall-right"></div>
+  </div>
+
+  <!-- ECRAN DE CONNEXION -->
+  <div id="login-screen" class="screen active">
+    <div class="login-page">
+      <!-- Classroom scene with students -->
+      <div class="classroom-scene">
+        <canvas id="login-classroom-bg"></canvas>
+        <div class="classroom-students" id="classroom-students-grid"></div>
+      </div>
+
+      <!-- Chalkboard title overlay -->
+      <div class="chalkboard-overlay">
+        <div class="chalkboard-frame">
+          <div class="coin-animation">💰</div>
+          <h1 class="pixel-title">COOL BANK</h1>
+          <p class="pixel-subtitle">Ecole La HERSE</p>
+          <p class="school-info" id="login-school-info"></p>
+        </div>
+      </div>
+
+      <!-- Login buttons at bottom -->
+      <div class="login-bar">
+        <button class="login-btn btn-student" onclick="showStudentLogin()">
+          <span class="login-btn-icon">👦👧</span>
+          <span class="login-btn-text">Eleve</span>
+        </button>
+        <button class="login-btn btn-banker" onclick="showBankerLogin()">
+          <span class="login-btn-icon">🏦</span>
+          <span class="login-btn-text">Banquier</span>
+        </button>
+        <button class="login-btn btn-teacher" onclick="showTeacherLogin()">
+          <span class="login-btn-icon">👩‍🏫</span>
+          <span class="login-btn-text">Prof</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Login Eleve -->
+    <div id="student-login-modal" class="modal hidden">
+      <div class="modal-content pixel-border">
+        <h2>Choisis ton nom !</h2>
+        <input type="text" id="student-search" class="pixel-input search-input" placeholder="🔍 Rechercher..." oninput="filterStudentLogin()">
+        <div id="student-list" class="student-grid"></div>
+        <div id="pin-entry" class="hidden">
+          <p class="pin-label">Tape ton code secret :</p>
+          <div class="pin-display" id="student-pin-display">
+            <span class="pin-dot"></span>
+            <span class="pin-dot"></span>
+            <span class="pin-dot"></span>
+            <span class="pin-dot"></span>
+          </div>
+          <div class="pin-pad">
+            <button onclick="enterPin(1)">1</button>
+            <button onclick="enterPin(2)">2</button>
+            <button onclick="enterPin(3)">3</button>
+            <button onclick="enterPin(4)">4</button>
+            <button onclick="enterPin(5)">5</button>
+            <button onclick="enterPin(6)">6</button>
+            <button onclick="enterPin(7)">7</button>
+            <button onclick="enterPin(8)">8</button>
+            <button onclick="enterPin(9)">9</button>
+            <button onclick="clearPin()">✖</button>
+            <button onclick="enterPin(0)">0</button>
+            <button onclick="submitPin()">✔</button>
+          </div>
+        </div>
+        <button class="back-btn" onclick="closeModal('student-login-modal')">← Retour</button>
+      </div>
+    </div>
+
+    <!-- Modal Login Banquier -->
+    <div id="banker-login-modal" class="modal hidden">
+      <div class="modal-content pixel-border">
+        <h2>🏦 Acces Banquier</h2>
+        <p class="modal-hint">Tape ton code banquier a 5 chiffres :</p>
+        <div class="pin-display" id="banker-pin-display">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+        <div class="pin-pad">
+          <button onclick="enterBankerPin(1)">1</button>
+          <button onclick="enterBankerPin(2)">2</button>
+          <button onclick="enterBankerPin(3)">3</button>
+          <button onclick="enterBankerPin(4)">4</button>
+          <button onclick="enterBankerPin(5)">5</button>
+          <button onclick="enterBankerPin(6)">6</button>
+          <button onclick="enterBankerPin(7)">7</button>
+          <button onclick="enterBankerPin(8)">8</button>
+          <button onclick="enterBankerPin(9)">9</button>
+          <button onclick="clearBankerPin()">✖</button>
+          <button onclick="enterBankerPin(0)">0</button>
+          <button onclick="submitBankerPin()">✔</button>
+        </div>
+        <button class="back-btn" onclick="closeModal('banker-login-modal')">← Retour</button>
+      </div>
+    </div>
+
+    <!-- Modal Login Prof -->
+    <div id="teacher-login-modal" class="modal hidden">
+      <div class="modal-content pixel-border">
+        <h2>👩‍🏫 Acces Professeur</h2>
+        <div class="pin-display" id="teacher-pin-display">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+        <div class="pin-pad">
+          <button onclick="enterTeacherPin(1)">1</button>
+          <button onclick="enterTeacherPin(2)">2</button>
+          <button onclick="enterTeacherPin(3)">3</button>
+          <button onclick="enterTeacherPin(4)">4</button>
+          <button onclick="enterTeacherPin(5)">5</button>
+          <button onclick="enterTeacherPin(6)">6</button>
+          <button onclick="enterTeacherPin(7)">7</button>
+          <button onclick="enterTeacherPin(8)">8</button>
+          <button onclick="enterTeacherPin(9)">9</button>
+          <button onclick="clearTeacherPin()">✖</button>
+          <button onclick="enterTeacherPin(0)">0</button>
+          <button onclick="submitTeacherPin()">✔</button>
+        </div>
+        <button class="back-btn" onclick="closeModal('teacher-login-modal')">← Retour</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ECRAN ELEVE -->
+  <div id="student-screen" class="screen">
+    <canvas id="classroom-bg" class="classroom-bg"></canvas>
+
+    <nav class="student-nav">
+      <div class="nav-left">
+        <div id="nav-avatar" class="mini-avatar"></div>
+        <span id="nav-name" class="pixel-text-sm"></span>
+      </div>
+      <div class="nav-center">
+        <div class="balance-display">
+          <span class="balance-label">Mon solde</span>
+          <span id="nav-balance" class="balance-amount">0</span>
+          <span class="balance-unit">centicools</span>
+        </div>
+      </div>
+      <div class="nav-right">
+        <button class="nav-btn" onclick="logout()">🚪</button>
+      </div>
+    </nav>
+
+    <div class="student-tabs">
+      <button class="tab active" onclick="showTab('dashboard')" data-tab="dashboard">🏠 Accueil</button>
+      <button class="tab" onclick="showTab('avatar')" data-tab="avatar">👤 Avatar</button>
+      <button class="tab" onclick="showTab('belts')" data-tab="belts">🥋 Ceintures</button>
+      <button class="tab" onclick="showTab('shop')" data-tab="shop">🛍️ Boutique</button>
+      <button class="tab" onclick="showTab('passes')" data-tab="passes">🎮 Passes</button>
+      <button class="tab" onclick="showTab('history')" data-tab="history">📜 Historique</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="dashboard-grid">
+        <div class="dash-card pixel-border card-balance">
+          <h3>💰 Mon Porte-Monnaie</h3>
+          <div class="cool-breakdown" id="cool-breakdown"></div>
+          <div id="balance-status" class="balance-status"></div>
+        </div>
+        <div class="dash-card pixel-border card-job">
+          <h3>💼 Mon Metier</h3>
+          <div id="my-job">Pas de metier cette semaine</div>
+        </div>
+        <div class="dash-card pixel-border card-recent">
+          <h3>📋 Dernieres Activites</h3>
+          <div id="recent-transactions"></div>
+        </div>
+        <div class="dash-card pixel-border card-avatar-preview">
+          <h3>👤 Mon Avatar</h3>
+          <div id="dashboard-avatar" class="avatar-large"></div>
+        </div>
+        <div class="dash-card card-pass-quick" id="dash-pass-card">
+          <div class="dash-pass-inner">
+            <div class="dash-pass-left">
+              <div class="dash-pass-icons">🎮🧱🎲</div>
+              <div class="dash-pass-title">Passe Jeux</div>
+              <div class="dash-pass-subtitle" id="dash-pass-status">Chargement...</div>
+            </div>
+            <button class="dash-pass-btn" id="dash-pass-btn" onclick="quickBuyPass()">Acheter<br><small>20 cc</small></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avatar Editor -->
+    <div id="tab-avatar" class="tab-content">
+      <div class="avatar-editor">
+        <div class="avatar-preview-container">
+          <div id="avatar-canvas" class="avatar-canvas pixel-border"></div>
+        </div>
+        <div class="avatar-options">
+          <h3>🎨 Personnalise ton avatar !</h3>
+          <div class="option-group">
+            <h4>Couleur de peau</h4>
+            <div id="skin-colors" class="color-picker"></div>
+          </div>
+          <div class="option-group">
+            <h4>Yeux</h4>
+            <div id="eye-options" class="pixel-options"></div>
+          </div>
+          <div class="option-group">
+            <h4>Bouche</h4>
+            <div id="mouth-options" class="pixel-options"></div>
+          </div>
+          <div class="option-group">
+            <h4>Cheveux</h4>
+            <div id="hair-options" class="pixel-options"></div>
+          </div>
+          <div class="option-group">
+            <h4>Couleur Cheveux</h4>
+            <div id="hair-colors" class="color-picker"></div>
+          </div>
+          <div class="option-group owned-items">
+            <h4>✨ Mes Items (Boutique)</h4>
+            <div id="owned-items-list"></div>
+          </div>
+          <button class="save-btn" onclick="saveAvatar()">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ceintures -->
+    <div id="tab-belts" class="tab-content">
+      <h2 class="section-title">🥋 Mes Ceintures</h2>
+      <div class="belt-category-tabs">
+        <button class="belt-cat-btn active" onclick="filterBelts('all')">Toutes</button>
+        <button class="belt-cat-btn" onclick="filterBelts('francais')">📖 Francais</button>
+        <button class="belt-cat-btn" onclick="filterBelts('maths')">🔢 Maths</button>
+        <button class="belt-cat-btn" onclick="filterBelts('divers')">🎯 Divers</button>
+      </div>
+      <div id="belts-grid" class="belts-grid"></div>
+    </div>
+
+    <!-- Boutique -->
+    <div id="tab-shop" class="tab-content">
+      <h2 class="section-title">🛍️ Boutique COOL</h2>
+      <div class="shop-categories" id="shop-categories"></div>
+      <div id="shop-items" class="shop-grid"></div>
+    </div>
+
+    <!-- Passes Jeux -->
+    <div id="tab-passes" class="tab-content">
+      <div class="pass-page">
+        <!-- Le ticket/pass principal -->
+        <div class="game-pass-card" id="game-pass-card">
+          <div class="pass-holographic"></div>
+          <div class="pass-ticket-notch pass-notch-left"></div>
+          <div class="pass-ticket-notch pass-notch-right"></div>
+          <div class="pass-card-inner">
+            <!-- Header du pass -->
+            <div class="pass-card-header">
+              <div class="pass-badge">DAILY PASS</div>
+              <div class="pass-card-title">PASSE JEUX</div>
+              <div class="pass-card-date" id="pass-card-date"></div>
+            </div>
+            <!-- Zone centrale avec icones -->
+            <div class="pass-card-icons">
+              <div class="pass-game-icon">🎮</div>
+              <div class="pass-game-icon">🧱</div>
+              <div class="pass-game-icon">🎲</div>
+              <div class="pass-game-icon">🏗️</div>
+            </div>
+            <!-- Description -->
+            <div class="pass-card-perks">
+              <div class="pass-perk"><span class="pass-perk-check">✦</span> Acces aux jeux Lego</div>
+              <div class="pass-perk"><span class="pass-perk-check">✦</span> Acces a la Salle de Jeux</div>
+              <div class="pass-perk"><span class="pass-perk-check">✦</span> Valable toute la journee</div>
+            </div>
+            <!-- Ligne pointillee separatrice -->
+            <div class="pass-card-divider"></div>
+            <!-- Zone prix et status -->
+            <div class="pass-card-footer">
+              <div class="pass-card-price">
+                <span class="pass-price-amount">20</span>
+                <span class="pass-price-unit">centicools<br><small>2 decicools</small></span>
+              </div>
+              <div id="pass-status" class="pass-card-status"></div>
+            </div>
+            <!-- Bouton d'achat -->
+            <button class="pass-buy-btn" id="pass-buy-btn" onclick="buyDailyPass('jeux')">
+              🎮 Acheter mon Passe Jeux
+            </button>
+          </div>
+        </div>
+        <!-- Deco elements autour -->
+        <div class="pass-floating-icons">
+          <span class="pass-float-icon" style="--delay:0s;--x:-60px;--y:-40px">🎮</span>
+          <span class="pass-float-icon" style="--delay:0.5s;--x:70px;--y:-30px">🧱</span>
+          <span class="pass-float-icon" style="--delay:1s;--x:-80px;--y:50px">🎲</span>
+          <span class="pass-float-icon" style="--delay:1.5s;--x:90px;--y:40px">🏗️</span>
+          <span class="pass-float-icon" style="--delay:2s;--x:0px;--y:-70px">⭐</span>
+          <span class="pass-float-icon" style="--delay:2.5s;--x:-50px;--y:70px">🎯</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique -->
+    <div id="tab-history" class="tab-content">
+      <h2 class="section-title">📜 Mon Historique</h2>
+      <div id="transaction-list" class="transaction-list"></div>
+    </div>
+  </div>
+
+  <!-- ECRAN BANQUIER -->
+  <div id="banker-screen" class="screen">
+    <nav class="banker-nav">
+      <div class="nav-left">
+        <div id="banker-nav-avatar" class="mini-avatar"></div>
+        <span id="banker-nav-name" class="pixel-text-sm"></span>
+        <span class="banker-badge">🏦 BANQUIER</span>
+      </div>
+      <div class="nav-right">
+        <button class="nav-btn" onclick="logout()">🚪</button>
+      </div>
+    </nav>
+
+    <div class="banker-content">
+      <h2 class="section-title">🏦 Interface Banquier</h2>
+      <div class="manage-grid">
+        <div class="manage-section pixel-border">
+          <h3>Choisir un eleve</h3>
+          <input type="text" class="pixel-input search-input" placeholder="🔍 Rechercher..." oninput="filterBankerStudents(this.value)">
+          <div id="banker-student-list" class="manage-student-list"></div>
+        </div>
+        <div class="manage-section pixel-border">
+          <h3>Montant et raison</h3>
+          <div id="banker-selected-name" class="selected-info"></div>
+          <div class="amount-presets" id="banker-presets">
+            <button class="preset-btn" onclick="setBankerAmount(1)">+1</button>
+            <button class="preset-btn" onclick="setBankerAmount(5)">+5</button>
+            <button class="preset-btn" onclick="setBankerAmount(10)">+10</button>
+            <button class="preset-btn" onclick="setBankerAmount(50)">+50</button>
+            <button class="preset-btn" onclick="setBankerAmount(100)">+100</button>
+          </div>
+          <input type="number" id="banker-amount" class="pixel-input" placeholder="Montant" min="1">
+          <select id="banker-type" class="pixel-select" onchange="updateBankerPresets()">
+            <option value="earn">✅ Deposer (ajouter)</option>
+            <option value="lose">❌ Retirer</option>
+          </select>
+          <input type="text" id="banker-reason" class="pixel-input" placeholder="Raison">
+          <button class="action-btn" onclick="bankerTransaction()">✅ Valider</button>
+        </div>
+      </div>
+      <!-- Section Passe Jeux Groupe -->
+      <div class="banker-pass-section">
+        <h2 class="section-title">🎮 Passe Jeux - Achat de groupe</h2>
+        <div class="pass-group-container">
+          <div class="pass-group-search-box">
+            <input type="text" id="pass-group-search" class="pixel-input search-input" placeholder="🔍 Tape un nom pour ajouter..." oninput="searchPassStudents(this.value)" autocomplete="off">
+            <div id="pass-search-suggestions" class="pass-search-suggestions hidden"></div>
+          </div>
+          <div class="pass-group-selected" id="pass-group-selected">
+            <p class="pass-group-empty" id="pass-group-empty">Aucun eleve selectionne — cherche un nom ci-dessus</p>
+          </div>
+          <div class="pass-group-actions">
+            <button class="action-btn pass-select-all-btn" onclick="selectAllEligibleForPass()">✅ Selectionner tous les eligibles</button>
+            <button class="action-btn pass-clear-btn" onclick="clearPassGroup()">🗑️ Vider la selection</button>
+            <button class="action-btn pass-group-buy-btn" id="pass-group-buy-btn" onclick="buyGroupPass()">🎮 Acheter les passes (<span id="pass-group-count">0</span> eleves)</button>
+          </div>
+          <div class="pass-group-summary" id="pass-group-summary"></div>
+        </div>
+      </div>
+
+      <h3 class="section-subtitle">📜 Dernieres transactions</h3>
+      <div id="banker-history" class="transaction-list scrollable-list"></div>
+    </div>
+  </div>
+
+  <!-- ECRAN PROFESSEUR -->
+  <div id="teacher-screen" class="screen">
+    <nav class="teacher-nav">
+      <div class="nav-left">
+        <span class="pixel-text-sm">👩‍🏫 Mode Professeur</span>
+      </div>
+      <div class="nav-right">
+        <button class="nav-btn nav-btn-text" onclick="backupData()">💾</button>
+        <button class="nav-btn nav-btn-text" onclick="logout()">🚪</button>
+      </div>
+    </nav>
+
+    <div class="teacher-tabs">
+      <button class="tab active" onclick="showTeacherTab('t-dashboard')" data-tab="t-dashboard">📊 Classe</button>
+      <button class="tab" onclick="showTeacherTab('t-manage')" data-tab="t-manage">💰 COOL</button>
+      <button class="tab" onclick="showTeacherTab('t-students')" data-tab="t-students">👦 Eleves</button>
+      <button class="tab" onclick="showTeacherTab('t-belts')" data-tab="t-belts">🥋 Ceintures</button>
+      <button class="tab" onclick="showTeacherTab('t-jobs')" data-tab="t-jobs">💼 Metiers</button>
+      <button class="tab" onclick="showTeacherTab('t-market')" data-tab="t-market">🏪 Marche</button>
+      <button class="tab" onclick="showTeacherTab('t-history')" data-tab="t-history">📜 Historique</button>
+      <button class="tab" onclick="showTeacherTab('t-config')" data-tab="t-config">⚙️ Config</button>
+    </div>
+
+    <!-- Teacher Dashboard -->
+    <div id="tab-t-dashboard" class="tab-content active">
+      <div class="teacher-stats" id="teacher-stats"></div>
+      <div id="belt-overview-section" class="belt-overview-section">
+        <h3 class="section-subtitle">🥋 Vue ceintures de la classe</h3>
+        <div id="belt-overview-table"></div>
+      </div>
+      <h3 class="section-subtitle">👦 Eleves</h3>
+      <input type="text" class="pixel-input search-input" placeholder="🔍 Rechercher un eleve..." oninput="filterClassOverview(this.value)">
+      <div class="class-overview" id="class-overview"></div>
+    </div>
+
+    <!-- Manage COOL -->
+    <div id="tab-t-manage" class="tab-content">
+      <div class="manage-cool">
+        <h2 class="section-title">💰 Distribuer / Retirer des COOL</h2>
+        <div class="manage-grid">
+          <div class="manage-section pixel-border">
+            <h3>Selectionner les eleves</h3>
+            <div class="btn-group">
+              <button class="small-btn" onclick="selectAllStudents()">Tout</button>
+              <button class="small-btn" onclick="deselectAllStudents()">Aucun</button>
+            </div>
+            <input type="text" class="pixel-input search-input" placeholder="🔍 Rechercher..." oninput="filterManageStudents(this.value)">
+            <div id="manage-student-list" class="manage-student-list"></div>
+          </div>
+          <div class="manage-section pixel-border">
+            <h3>Montant et raison</h3>
+            <div class="amount-presets" id="cool-presets">
+              <button class="preset-btn" onclick="setAmount(1)">+1</button>
+              <button class="preset-btn" onclick="setAmount(5)">+5</button>
+              <button class="preset-btn" onclick="setAmount(10)">+10</button>
+              <button class="preset-btn" onclick="setAmount(50)">+50</button>
+              <button class="preset-btn" onclick="setAmount(100)">+100</button>
+            </div>
+            <input type="number" id="cool-amount" class="pixel-input" placeholder="Montant personnalise" min="1">
+            <select id="cool-type" class="pixel-select" onchange="updateCoolPresets()">
+              <option value="earn">✅ Donner (gagner)</option>
+              <option value="lose">❌ Retirer (perte)</option>
+            </select>
+            <input type="text" id="cool-reason" class="pixel-input" placeholder="Raison (ex: bon travail, geneur...)">
+            <button class="action-btn" onclick="distributeCoool()">Valider</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students management -->
+    <div id="tab-t-students" class="tab-content">
+      <h2 class="section-title">👦 Gestion des Eleves</h2>
+
+      <div class="add-student pixel-border">
+        <h3>➕ Ajouter un eleve</h3>
+        <label class="input-label">Prenom :</label>
+        <input type="text" id="new-first-name" class="pixel-input" placeholder="ex: Jonas">
+        <label class="input-label">Nom :</label>
+        <input type="text" id="new-last-name" class="pixel-input" placeholder="ex: Dupont">
+        <label class="input-label">Numero en classe :</label>
+        <input type="number" id="new-class-number" class="pixel-input" placeholder="ex: 1" min="1" max="40">
+        <label class="input-label">Code PIN (4 chiffres) :</label>
+        <input type="text" id="new-pin" class="pixel-input" placeholder="ex: 1234" maxlength="4">
+        <button class="action-btn" onclick="addStudent()">✅ Ajouter l'eleve</button>
+        <div id="add-student-feedback" class="feedback"></div>
+      </div>
+
+      <div class="add-student pixel-border border-warning">
+        <h3>➕➕ Ajouter plusieurs eleves</h3>
+        <p class="hint-text">Un eleve par ligne : Prenom Nom (PIN = 0000 par defaut)</p>
+        <textarea id="bulk-students" class="pixel-input textarea" placeholder="Jonas Dupont&#10;Marie Martin&#10;Lucas Bernard"></textarea>
+        <button class="action-btn btn-warning" onclick="addBulkStudents()">✅ Ajouter tous</button>
+        <div id="bulk-feedback" class="feedback"></div>
+      </div>
+
+      <div class="student-actions">
+        <h3 class="section-subtitle">📋 Liste des eleves</h3>
+        <div class="btn-group">
+          <button class="small-btn" onclick="selectAllManageStudents()">Tout</button>
+          <button class="small-btn" onclick="deselectAllManageStudents()">Aucun</button>
+          <button class="delete-btn" onclick="bulkDeleteStudents()">🗑️ Supprimer</button>
+        </div>
+      </div>
+      <input type="text" class="pixel-input search-input" placeholder="🔍 Rechercher..." oninput="filterStudentManagement(this.value)">
+      <div id="student-management-list" class="student-management-list"></div>
+    </div>
+
+    <!-- Belts management -->
+    <div id="tab-t-belts" class="tab-content">
+      <h2 class="section-title">🥋 Gestion des Ceintures</h2>
+      <select id="belt-student-select" class="pixel-select" onchange="loadStudentBeltsTeacher()">
+        <option value="">Choisir un eleve...</option>
+      </select>
+      <div class="belt-category-tabs" id="teacher-belt-cats">
+        <button class="belt-cat-btn active" onclick="filterTeacherBelts('all')">Toutes</button>
+        <button class="belt-cat-btn" onclick="filterTeacherBelts('francais')">📖 Francais</button>
+        <button class="belt-cat-btn" onclick="filterTeacherBelts('maths')">🔢 Maths</button>
+        <button class="belt-cat-btn" onclick="filterTeacherBelts('divers')">🎯 Divers</button>
+      </div>
+      <div id="belt-management-grid" class="belts-grid"></div>
+    </div>
+
+    <!-- Jobs management -->
+    <div id="tab-t-jobs" class="tab-content">
+      <h2 class="section-title">💼 Metiers de la Semaine</h2>
+      <p class="hint-text">Quand tu assignes le metier Banquier, un code a 5 chiffres sera genere automatiquement.</p>
+      <div id="jobs-management" class="jobs-management"></div>
+      <button class="action-btn" onclick="payJobs()">💶 Payer les salaires</button>
+    </div>
+
+    <!-- Market management -->
+    <div id="tab-t-market" class="tab-content">
+      <h2 class="section-title">🏪 Marche Mensuel</h2>
+      <div class="market-add pixel-border">
+        <h3>Ajouter un article</h3>
+        <select id="market-seller" class="pixel-select">
+          <option value="">Objet de la classe (pas de vendeur)</option>
+        </select>
+        <input type="text" id="market-item-name" class="pixel-input" placeholder="Nom de l'objet">
+        <input type="text" id="market-item-desc" class="pixel-input" placeholder="Description">
+        <input type="number" id="market-item-price" class="pixel-input" placeholder="Prix en centicools" min="1">
+        <button class="action-btn" onclick="addMarketItem()">Mettre en vente</button>
+      </div>
+      <h3 class="section-subtitle">Articles en vente</h3>
+      <div id="market-items-list" class="shop-grid"></div>
+    </div>
+
+    <!-- Transaction history (global) -->
+    <div id="tab-t-history" class="tab-content">
+      <h2 class="section-title">📜 Historique Global</h2>
+      <p class="hint-text">Toutes les transactions, par qui et quand. Cliquez sur une transaction pour l'annuler.</p>
+      <div id="global-transaction-list" class="transaction-list"></div>
+    </div>
+
+    <!-- Config -->
+    <div id="tab-t-config" class="tab-content">
+      <h2 class="section-title">⚙️ Configuration</h2>
+      <div class="config-section pixel-border">
+        <h3>Informations de l'ecole</h3>
+        <label class="input-label">Nom de l'ecole :</label>
+        <input type="text" id="config-school-name" class="pixel-input" placeholder="Ecole La HERSE">
+        <label class="input-label">Nom de l'enseignant(e) :</label>
+        <input type="text" id="config-teacher-name" class="pixel-input" placeholder="Mme Trouve">
+        <label class="input-label">Classe :</label>
+        <input type="text" id="config-class-name" class="pixel-input" placeholder="Classe 2">
+        <label class="input-label">Annee scolaire :</label>
+        <input type="text" id="config-school-year" class="pixel-input" placeholder="2025-2026">
+        <button class="action-btn" onclick="saveConfig()">💾 Sauvegarder</button>
+      </div>
+      <div class="config-section pixel-border">
+        <h3>Changer le code professeur</h3>
+        <label class="input-label">Ancien code :</label>
+        <input type="password" id="config-old-pin" class="pixel-input" placeholder="****">
+        <label class="input-label">Nouveau code :</label>
+        <input type="password" id="config-new-pin" class="pixel-input" placeholder="****">
+        <button class="action-btn" onclick="changeTeacherPin()">🔐 Changer</button>
+      </div>
+      <div class="config-section pixel-border">
+        <h3>Sauvegarde & Export</h3>
+        <button class="action-btn" onclick="backupData()">💾 Sauvegarder la base</button>
+        <button class="action-btn btn-secondary" onclick="exportData()">📤 Exporter en JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PREMIER CODE PIN -->
+  <div id="first-pin-modal" class="modal hidden">
+    <div class="modal-content pixel-border modal-small">
+      <h2>🔐 Bienvenue !</h2>
+      <p class="modal-hint">
+        C'est ta premiere connexion !<br>
+        Choisis ton code secret a 4 chiffres.<br>
+        <strong class="text-warning">Retiens-le bien !</strong>
+      </p>
+      <p class="pin-label">Nouveau code :</p>
+      <div class="pin-display" id="new-pin-display">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <div class="pin-pad">
+        <button onclick="enterNewPin(1)">1</button>
+        <button onclick="enterNewPin(2)">2</button>
+        <button onclick="enterNewPin(3)">3</button>
+        <button onclick="enterNewPin(4)">4</button>
+        <button onclick="enterNewPin(5)">5</button>
+        <button onclick="enterNewPin(6)">6</button>
+        <button onclick="enterNewPin(7)">7</button>
+        <button onclick="enterNewPin(8)">8</button>
+        <button onclick="enterNewPin(9)">9</button>
+        <button onclick="clearNewPin()">✖</button>
+        <button onclick="enterNewPin(0)">0</button>
+        <button onclick="submitNewPin()">✔</button>
+      </div>
+      <div id="new-pin-step" class="pin-step-info"></div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMATION -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-content pixel-border modal-small">
+      <h2 id="confirm-title">Confirmer</h2>
+      <p id="confirm-message" class="modal-hint"></p>
+      <div class="confirm-buttons">
+        <button class="action-btn btn-danger" id="confirm-yes" onclick="confirmAction()">✅ Oui</button>
+        <button class="back-btn" onclick="closeModal('confirm-modal')">❌ Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div id="notification" class="notification hidden">
+    <span id="notification-text"></span>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <script src="/js/avatar.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
