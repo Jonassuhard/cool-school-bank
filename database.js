@@ -20,17 +20,16 @@ async function deleteCollection(collectionName) {
   return snap.size;
 }
 
-// Seed data function - FORCE RESEED to replace old data
+// Seed data function - conditional seeding (only if collections are empty)
 async function seedData() {
   try {
-    // Force clean all old data first
-    const collections = ['belt_colors', 'subjects', 'students', 'student_belts', 'config', 'jobs', 'fine_rules', 'shop_categories', 'shop_items', 'transactions'];
-    console.log('  🧹 Nettoyage des anciennes donnees...');
-    for (const col of collections) {
-      const deleted = await deleteCollection(col);
-      if (deleted > 0) console.log(`    🗑️ ${col}: ${deleted} documents supprimes`);
+    // Check if data already exists
+    const studentsSnap = await db.collection('students').limit(1).get();
+    if (!studentsSnap.empty) {
+      console.log('  ✅ Donnees existantes detectees, pas de re-seed');
+      return;
     }
-    console.log('  ✅ Nettoyage termine, re-seed en cours...');
+    console.log('  🌱 Base vide, initialisation des donnees La HERSE...');
 
     // --- Belt Colors (11 ceintures La HERSE) ---
     {
