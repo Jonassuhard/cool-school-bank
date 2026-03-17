@@ -2889,47 +2889,446 @@ body {
   background: rgba(255,215,0,0.1);
 }
 
-/* ========== RESPONSIVE ========== */
+/* ========== BOUTIQUE FOURNITURES ========== */
+.supply-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.supply-categories {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.supply-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.supply-card {
+  background: var(--bg-card);
+  border: 3px solid var(--primary);
+  padding: 14px;
+  text-align: center;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.supply-card:hover {
+  border-color: var(--secondary);
+  transform: translateY(-2px);
+}
+
+.supply-card.out-of-stock {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.supply-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.supply-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.supply-price {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--secondary);
+  margin-bottom: 6px;
+}
+
+.supply-stock {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.supply-stock.low { color: var(--warning); }
+.supply-stock.empty { color: var(--danger); }
+
+.supply-buy-btn {
+  padding: 6px 14px;
+  font-family: var(--font-readable);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--success);
+  border: none;
+  color: var(--bg);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.supply-buy-btn:hover { background: #3bc96a; }
+.supply-buy-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
+
+/* Commandes fournitures */
+.supply-order {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.supply-order .order-status {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  padding: 3px 8px;
+}
+
+.order-status.pending { background: var(--warning); color: var(--bg); }
+.order-status.delivered { background: var(--success); color: var(--bg); }
+
+.supply-deliver-btn {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--success);
+  border: none;
+  color: var(--bg);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.supply-deliver-btn:hover { background: #3bc96a; }
+
+.supply-delete-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+  background: var(--danger);
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.supply-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.supply-form .pixel-input {
+  flex: 1;
+  min-width: 80px;
+}
+
+.supply-orders-section {
+  margin-top: 20px;
+}
+
+/* ========== RESPONSIVE COMPLET ========== */
+
+/* --- Tablet (768px) --- */
 @media (max-width: 768px) {
-  .pixel-title { font-size: 22px; }
-  .big-btn { padding: 20px 25px; min-width: 140px; }
-  .btn-icon { font-size: 36px; }
-  .btn-text { font-size: 11px; }
-  .login-buttons { gap: 12px; padding: 15px; }
+  body { font-size: 13px; }
+  .pixel-title { font-size: 20px; letter-spacing: 2px; }
+
+  /* Grids → 1 colonne */
   .manage-grid { grid-template-columns: 1fr; }
   .avatar-editor { grid-template-columns: 1fr; }
-  .dashboard-grid { grid-template-columns: 1fr; }
-  .student-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
-  .belts-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .student-management-list { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-  .class-overview { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .dashboard-grid { grid-template-columns: 1fr; gap: 12px; }
+  .student-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+  .belts-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .shop-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .student-management-list { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .class-overview { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 
-  .student-nav, .teacher-nav {
+  /* Nav compacte */
+  .student-nav, .teacher-nav, .banker-nav {
     padding: 8px 12px;
+    gap: 6px;
   }
-
   .balance-amount { font-size: 14px; }
-  .tab { padding: 10px 10px; font-size: 11px; }
+  .balance-label { font-size: 11px; }
+  .nav-btn { padding: 6px 10px; font-size: 16px; }
 
+  /* Tabs scrollables */
+  .student-tabs, .teacher-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .student-tabs::-webkit-scrollbar,
+  .teacher-tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 10px 12px; font-size: 11px; }
   .tab-content { padding: 12px; }
 
-  .pin-pad {
-    grid-template-columns: repeat(3, 55px);
+  /* Pin pad */
+  .pin-pad { grid-template-columns: repeat(3, 55px); }
+  .pin-pad button { width: 55px; height: 48px; font-size: 18px; }
+
+  /* Cards */
+  .dash-card { padding: 14px; }
+  .dash-card h3 { font-size: 9px; }
+  .section-title { font-size: 14px; }
+
+  /* Modals */
+  .modal-content { padding: 20px 16px; width: 95%; max-height: 90vh; }
+
+  /* Tables */
+  .belt-overview-table { font-size: 11px; }
+  .belt-overview-table th, .belt-overview-table td { padding: 6px 4px; }
+  .belt-overview-section { overflow-x: auto; }
+
+  /* Transaction list */
+  .transaction-list { font-size: 12px; }
+  .transaction-item { padding: 10px; gap: 8px; }
+
+  /* Shop */
+  .shop-item { padding: 10px; }
+  .shop-cat-btn { padding: 6px 10px; font-size: 11px; }
+  .shop-categories { gap: 6px; }
+
+  /* Buttons */
+  .big-btn { padding: 18px 22px; min-width: 130px; }
+  .btn-icon { font-size: 32px; }
+  .btn-text { font-size: 11px; }
+  .login-buttons { gap: 10px; padding: 12px; }
+
+  /* Banker */
+  .banker-content { padding: 12px; }
+  .banker-student-item { padding: 8px 10px; font-size: 12px; }
+}
+
+/* --- Mobile (480px) --- */
+@media (max-width: 480px) {
+  body { font-size: 12px; }
+  .pixel-title { font-size: 16px; letter-spacing: 1px; margin: 10px 0; }
+
+  /* Login page : plein ecran, pas de scroll */
+  .login-page {
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height — ignore la barre d'adresse */
+    overflow: hidden;
   }
 
-  .pin-pad button {
-    width: 55px;
-    height: 48px;
-    font-size: 18px;
+  .chalkboard-frame {
+    padding: 12px 20px;
+    border-width: 5px;
+  }
+  .chalkboard-frame h1 { font-size: 16px !important; }
+  .chalkboard-frame .coin-animation { font-size: 36px; }
+  .school-info { font-size: 7px; margin-top: 4px; }
+
+  .login-bar {
+    flex-shrink: 0;
+  }
+  .login-btn {
+    padding: 12px 6px;
+    gap: 4px;
+  }
+  .login-btn-icon { font-size: 24px; }
+  .login-btn-text { font-size: 10px; }
+
+  /* Classroom seats plus petits */
+  .classroom-seat .seat-avatar { width: 30px; height: 30px; }
+  .classroom-seat .seat-desk { width: 42px; height: 8px; }
+  .classroom-seat .seat-name { font-size: 4px; }
+  .classroom-row { gap: 1px; margin-bottom: 4px; }
+  .chalkboard-overlay { padding: 8px 10px; }
+
+  /* Pas de scrollbar sur l'app entiere */
+  .screen.active {
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Masquer la scrollbar mais garder le scroll */
+  .screen.active::-webkit-scrollbar { display: none; }
+  .screen.active { scrollbar-width: none; }
+
+  /* Nav ultra compacte */
+  .student-nav, .teacher-nav, .banker-nav {
+    padding: 6px 10px;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .balance-amount { font-size: 12px; }
+  .balance-label { display: none; }
+  .balance-unit { font-size: 9px; }
+  .nav-btn { padding: 5px 8px; font-size: 14px; }
+  .mini-avatar { width: 32px; height: 32px; }
+  .pixel-text-sm { font-size: 7px; }
+
+  /* Tabs en ligne scrollable, pas de retour a la ligne */
+  .student-tabs, .teacher-tabs {
+    position: sticky;
+    top: 44px;
+    z-index: 99;
+    background: var(--bg-card);
+  }
+  .tab { padding: 8px 10px; font-size: 10px; white-space: nowrap; }
+
+  /* Contenu */
+  .tab-content { padding: 10px 8px; }
+  .section-title { font-size: 13px; margin-bottom: 10px; }
+
+  /* Grids */
+  .dashboard-grid { gap: 10px; }
+  .dash-card { padding: 12px; }
+  .dash-card h3 { font-size: 8px; margin-bottom: 10px; }
+  .student-grid {
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+    gap: 6px;
+    max-height: 45vh;
+    padding: 6px;
+  }
+  .student-card-login { padding: 8px 4px; font-size: 10px; }
+  .student-card-login .mini-avatar-login { width: 36px; height: 36px; }
+
+  /* Shop mobile */
+  .shop-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .shop-item { padding: 8px; }
+  .shop-item-name { font-size: 10px; }
+  .shop-item-desc { font-size: 9px; }
+  .shop-item-price { font-size: 9px; }
+  .shop-categories {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .shop-categories::-webkit-scrollbar { display: none; }
+  .shop-cat-btn { padding: 5px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Belts compact */
+  .belts-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+  .belt-category-tabs { gap: 4px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .belt-category-tabs::-webkit-scrollbar { display: none; }
+  .belt-cat-btn { padding: 5px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Pin pad mobile */
+  .pin-pad { grid-template-columns: repeat(3, 50px); gap: 6px; }
+  .pin-pad button { width: 50px; height: 44px; font-size: 16px; }
+
+  /* Modals plein ecran mobile */
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    padding: 16px 12px;
+    border-radius: 0;
+  }
+  .modal-content h2 { font-size: 12px; margin-bottom: 14px; }
+
+  /* Buttons */
+  .big-btn { padding: 14px 18px; min-width: 110px; }
+  .btn-icon { font-size: 26px; }
+  .btn-text { font-size: 9px; }
+
+  /* Banker */
+  .banker-content { padding: 10px 8px; }
+  .banker-student-item { padding: 8px; font-size: 11px; gap: 6px; }
+  .banker-badge { font-size: 7px; padding: 3px 6px; }
+
+  /* Teacher grids */
+  .student-management-list { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+  .class-overview { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; }
+  .manage-student-list { max-height: 250px; }
+
+  /* Belt overview table scroll horizontal */
+  .belt-overview-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .belt-overview-table { font-size: 10px; }
+
+  /* Transaction */
+  .transaction-list { font-size: 11px; }
+
+  /* Passes */
+  .game-pass-card { transform: scale(0.85); transform-origin: top center; }
+
+  /* Avatar editor */
+  .avatar-editor { gap: 10px; }
+  .avatar-preview-area { padding: 10px; }
+
+  /* Auction */
+  .auction-card { padding: 12px; }
+
+  /* Notification */
+  .notification { font-size: 11px; padding: 10px 16px; }
+}
+
+/* --- Ultra small (360px, petits telephones) --- */
+@media (max-width: 360px) {
+  .pixel-title { font-size: 14px; }
+  .chalkboard-frame h1 { font-size: 14px !important; }
+  .login-btn-icon { font-size: 20px; }
+  .login-btn-text { font-size: 9px; }
+  .tab { padding: 7px 8px; font-size: 9px; }
+  .shop-grid { grid-template-columns: repeat(2, 1fr); }
+  .student-grid { grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); }
+  .student-card-login .mini-avatar-login { width: 30px; height: 30px; }
+  .student-card-login { padding: 6px 3px; font-size: 9px; }
+  .pin-pad { grid-template-columns: repeat(3, 44px); gap: 4px; }
+  .pin-pad button { width: 44px; height: 40px; font-size: 14px; }
+}
+
+/* --- Touch optimisation --- */
+@media (hover: none) and (pointer: coarse) {
+  /* Cibles tactiles plus grandes */
+  .tab { min-height: 44px; }
+  .nav-btn { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .login-btn { min-height: 56px; }
+  .shop-cat-btn, .belt-cat-btn { min-height: 36px; }
+  .pin-pad button { min-height: 48px; }
+  .student-card-login { min-height: 44px; }
+  .banker-student-item { min-height: 44px; }
+
+  /* Pas de hover effects sur tactile */
+  .shop-item:hover { transform: none; box-shadow: none; }
+  .student-card-login:hover { transform: none; box-shadow: none; }
+  .banker-student-item:hover { border-color: transparent; }
+
+  /* Tap feedback */
+  .shop-item:active, .student-card-login:active, .tab:active, .nav-btn:active {
+    opacity: 0.7;
+    transition: opacity 0.05s;
   }
 }
 
-@media (max-width: 480px) {
-  .pixel-title { font-size: 18px; }
-  .big-btn { padding: 15px 20px; min-width: 120px; }
-  .btn-icon { font-size: 28px; }
-  .btn-text { font-size: 10px; }
-  .manage-student-list { max-height: 250px; }
+/* --- Landscape mobile --- */
+@media (max-height: 500px) and (orientation: landscape) {
+  .login-page { height: 100vh; height: 100dvh; }
+  .chalkboard-frame { padding: 8px 16px; }
+  .chalkboard-frame h1 { font-size: 14px !important; }
+  .chalkboard-frame .coin-animation { font-size: 24px; }
+  .classroom-row { margin-bottom: 2px; }
+  .login-btn { padding: 8px 6px; }
+  .login-btn-icon { font-size: 18px; }
+}
+
+/* --- Scrollbar cachee globale sur mobile --- */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  * { scrollbar-width: none; }
 }
 
 /* ========== AVATAR BORDER ANIMATIONS ========== */

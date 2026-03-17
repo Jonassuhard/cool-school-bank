@@ -220,6 +220,7 @@
       <button class="tab" onclick="showTab('avatar')" data-tab="avatar">👤 Avatar</button>
       <button class="tab" onclick="showTab('belts')" data-tab="belts">🥋 Ceintures</button>
       <button class="tab" onclick="showTab('shop')" data-tab="shop">🛍️ Boutique</button>
+      <button class="tab" onclick="showTab('supplies')" data-tab="supplies">✏️ Fournitures</button>
       <button class="tab" onclick="showTab('passes')" data-tab="passes">🎮 Passes</button>
       <button class="tab" onclick="showTab('history')" data-tab="history">📜 Historique</button>
     </div>
@@ -311,6 +312,18 @@
       <h2 class="section-title">🛍️ Boutique COOL</h2>
       <div class="shop-categories" id="shop-categories"></div>
       <div id="shop-items" class="shop-grid"></div>
+    </div>
+
+    <!-- Fournitures scolaires -->
+    <div id="tab-supplies" class="tab-content">
+      <h2 class="section-title">✏️ Fournitures Scolaires</h2>
+      <p class="supply-subtitle">Achete du vrai materiel de classe avec tes centicools !</p>
+      <div class="supply-categories" id="supply-categories"></div>
+      <div id="supply-items" class="supply-grid"></div>
+      <div id="my-supply-orders" class="supply-orders-section" style="display:none;">
+        <h3 class="section-title" style="margin-top:20px;">📦 Mes commandes</h3>
+        <div id="supply-orders-list"></div>
+      </div>
     </div>
 
     <!-- Passes Jeux -->
@@ -460,6 +473,7 @@
       <button class="tab" onclick="showTeacherTab('t-belts')" data-tab="t-belts">🥋 Ceintures</button>
       <button class="tab" onclick="showTeacherTab('t-jobs')" data-tab="t-jobs">💼 Metiers</button>
       <button class="tab" onclick="showTeacherTab('t-market')" data-tab="t-market">🏪 Marche</button>
+      <button class="tab" onclick="showTeacherTab('t-supplies')" data-tab="t-supplies">✏️ Fournitures</button>
       <button class="tab" onclick="showTeacherTab('t-history')" data-tab="t-history">📜 Historique</button>
       <button class="tab" onclick="showTeacherTab('t-config')" data-tab="t-config">⚙️ Config</button>
     </div>
@@ -587,6 +601,31 @@
       </div>
       <h3 class="section-subtitle">Articles en vente</h3>
       <div id="market-items-list" class="shop-grid"></div>
+    </div>
+
+    <!-- Fournitures scolaires (gestion prof) -->
+    <div id="tab-t-supplies" class="tab-content">
+      <h2 class="section-title">✏️ Gestion Fournitures</h2>
+
+      <div class="supply-manage-section pixel-border" style="padding:16px; margin-bottom:20px;">
+        <h3 style="font-size:13px; color:var(--secondary); margin-bottom:12px;">Ajouter / Modifier un article</h3>
+        <div class="supply-form">
+          <input type="text" id="supply-name" class="pixel-input" placeholder="Nom (ex: Stylo bleu)">
+          <input type="text" id="supply-icon" class="pixel-input" placeholder="Emoji (ex: 🖊️)" style="width:80px;">
+          <input type="number" id="supply-price" class="pixel-input" placeholder="Prix (cc)" min="1" style="width:100px;">
+          <input type="number" id="supply-stock" class="pixel-input" placeholder="Stock" min="0" style="width:80px;">
+          <button class="pixel-btn" onclick="addSupplyItem()">Ajouter</button>
+        </div>
+      </div>
+
+      <h3 style="font-size:13px; color:var(--secondary); margin-bottom:12px;">Articles en vente</h3>
+      <div id="supply-manage-list" class="supply-grid"></div>
+
+      <h3 style="font-size:13px; color:var(--secondary); margin:20px 0 12px;">📦 Commandes en attente</h3>
+      <div id="supply-pending-orders"></div>
+
+      <h3 style="font-size:13px; color:var(--text-muted); margin:20px 0 12px;">✅ Commandes distribuees</h3>
+      <div id="supply-completed-orders"></div>
     </div>
 
     <!-- Transaction history (global) -->

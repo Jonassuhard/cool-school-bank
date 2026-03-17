@@ -74,6 +74,12 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+
+// --- Validation ID ---
+function isValidId(id) {
+  return typeof id === 'string' && id.length > 0 && id.length <= 100 && !/[\/\\\.\.\.]/.test(id);
+}
+
 // --- Middlewares d'authentification ---
 function requireAuth(req, res, next) {
   const token = req.headers['x-session-token'];
@@ -158,7 +164,7 @@ app.get('/api/config', async (req, res) => {
     const config = {};
     for (const doc of snap.docs) {
       const data = doc.data();
-      if (doc.id !== 'teacher_pin') {
+      if (doc.id !== 'teacher_pin' && doc.id !== 'firebase_service_account') {
         config[doc.id] = data.value;
       }
     }
@@ -350,6 +356,7 @@ app.post('/api/students/login', async (req, res) => {
   try {
     if (!checkRateLimit(req.ip)) return res.status(429).json({ error: 'Trop de tentatives ! Attends 2 minutes.' });
     const { id, pin_code } = req.body;
+    if (!id || !pin_code || typeof pin_code !== 'string' || pin_code.length > 10) return res.status(400).json({ error: 'Donnees invalides' });
     const doc = await db.collection('students').doc(id).get();
     if (!doc.exists) return res.status(401).json({ error: 'Code PIN incorrect' });
     const student = doc.data();
@@ -1422,7 +1429,9 @@ app.get('/api/market', async (req, res) => {
 
 app.post('/api/market/add', async (req, res) => {
   try {
-    const { seller_id, name, description, price } = req.body;
+    const { seller_id, name: rawName, description: rawDesc, price } = req.body;
+    const name = sanitize(rawName || '');
+    const description = sanitize(rawDesc || '');
     const today = new Date().toISOString().split('T')[0];
     await db.collection('market_items').doc().set({
       seller_id: seller_id || null,
@@ -1685,7 +1694,7 @@ app.put('/api/teacher/pin', requireTeacher, async (req, res) => {
     const { old_pin, new_pin } = req.body;
     const currentPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
     if (old_pin !== currentPin) return res.status(401).json({ error: 'Ancien code incorrect' });
-    if (!new_pin || new_pin.length < 4) return res.status(400).json({ error: 'Nouveau code trop court' });
+    if (!new_pin || new_pin.length < 4 || new_pin.length > 20 || !/^[0-9]+$/.test(new_pin)) return res.status(400).json({ error: 'Nouveau code trop court' });
     await setConfig('teacher_pin', new_pin);
     res.json({ message: 'Code professeur modifie !' });
   } catch (err) {
@@ -2147,11 +2156,172 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+// ==================== API FOURNITURES SCOLAIRES ====================
+
+// Liste des fournitures
+app.get('/api/supplies', async (req, res) => {
+  try {
+    const snap = await db.collection('supply_items').orderBy('name').get();
+    res.json(snap.docs.map(docToObj));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Ajouter un article (prof)
+app.post('/api/supplies', requireTeacher, async (req, res) => {
+  try {
+    const { name, icon, price, stock } = req.body;
+    if (!name || !price) return res.status(400).json({ error: 'Nom et prix requis' });
+    const ref = await db.collection('supply_items').add({
+      name: sanitize(name),
+      icon: icon || '📦',
+      price: Number(price),
+      stock: Number(stock) || 0,
+      created_at: new Date().toISOString()
+    });
+    res.json({ id: ref.id, message: 'Article ajoute' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Modifier un article (prof)
+app.put('/api/supplies/:id', requireTeacher, async (req, res) => {
+  try {
+    const { name, icon, price, stock } = req.body;
+    const update = {};
+    if (name !== undefined) update.name = sanitize(name);
+    if (icon !== undefined) update.icon = icon;
+    if (price !== undefined) update.price = Number(price);
+    if (stock !== undefined) update.stock = Number(stock);
+    await db.collection('supply_items').doc(req.params.id).update(update);
+    res.json({ message: 'Article mis a jour' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Supprimer un article (prof)
+app.delete('/api/supplies/:id', requireTeacher, async (req, res) => {
+  try {
+    await db.collection('supply_items').doc(req.params.id).delete();
+    res.json({ message: 'Article supprime' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Commander une fourniture (eleve)
+app.post('/api/supplies/order', requireAuth, async (req, res) => {
+  try {
+    const { supply_id, student_id } = req.body;
+    if (!supply_id || !student_id) return res.status(400).json({ error: 'Donnees manquantes' });
+
+    const itemDoc = await db.collection('supply_items').doc(supply_id).get();
+    if (!itemDoc.exists) return res.status(404).json({ error: 'Article introuvable' });
+    const item = itemDoc.data();
+
+    if (item.stock <= 0) return res.status(400).json({ error: 'Rupture de stock !' });
+
+    const studentDoc = await db.collection('students').doc(student_id).get();
+    if (!studentDoc.exists) return res.status(404).json({ error: 'Eleve introuvable' });
+    const student = studentDoc.data();
+
+    if (student.balance < item.price) {
+      return res.status(400).json({ error: 'Pas assez de centicools ! (besoin de ' + item.price + ' cc)' });
+    }
+
+    // Debiter + baisser stock + creer commande
+    const batch = db.batch();
+    batch.update(db.collection('students').doc(student_id), {
+      balance: FieldValue.increment(-item.price)
+    });
+    batch.update(db.collection('supply_items').doc(supply_id), {
+      stock: FieldValue.increment(-1)
+    });
+    const orderRef = db.collection('supply_orders').doc();
+    batch.set(orderRef, {
+      student_id,
+      student_name: (student.first_name || '') + ' ' + (student.last_name || ''),
+      supply_id,
+      supply_name: item.name,
+      supply_icon: item.icon,
+      price: item.price,
+      status: 'pending',
+      ordered_at: new Date().toISOString(),
+      delivered_at: null
+    });
+    // Transaction log
+    const txRef = db.collection('transactions').doc();
+    batch.set(txRef, {
+      student_id,
+      amount: -item.price,
+      type: 'debit',
+      reason: 'Achat fourniture: ' + item.name,
+      created_by: 'system',
+      created_at: new Date().toISOString()
+    });
+    await batch.commit();
+    res.json({ message: item.name + ' commande ! Le prof te le donnera bientot.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mes commandes (eleve)
+app.get('/api/supplies/orders/:studentId', requireAuth, async (req, res) => {
+  try {
+    const snap = await db.collection('supply_orders')
+      .where('student_id', '==', req.params.studentId)
+      .orderBy('ordered_at', 'desc')
+      .limit(20)
+      .get();
+    res.json(snap.docs.map(docToObj));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Toutes les commandes (prof)
+app.get('/api/supplies/orders', requireTeacher, async (req, res) => {
+  try {
+    const snap = await db.collection('supply_orders')
+      .orderBy('ordered_at', 'desc')
+      .limit(50)
+      .get();
+    res.json(snap.docs.map(docToObj));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Marquer commande comme livree (prof)
+app.put('/api/supplies/orders/:id/deliver', requireTeacher, async (req, res) => {
+  try {
+    await db.collection('supply_orders').doc(req.params.id).update({
+      status: 'delivered',
+      delivered_at: new Date().toISOString()
+    });
+    res.json({ message: 'Commande marquee comme livree' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Start server
 app.listen(PORT, async () => {
   const teacherPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
   console.log(`\n🏦 COOL School Bank lancé !`);
   console.log(`📍 Ouvre ton navigateur : http://localhost:${PORT}`);
-  console.log(`\n👨‍🏫 Code prof : ${teacherPin}`);
+  console.log(`\n👨‍🏫 Code prof : ${process.env.NODE_ENV === 'production' ? '****' : teacherPin}`);
   console.log(`👦 Code élève par défaut : 0000\n`);
 });

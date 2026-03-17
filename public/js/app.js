@@ -502,6 +502,7 @@ function showTab(tabName) {
   else if (tabName === 'avatar') loadAvatarEditor();
   else if (tabName === 'belts') loadStudentBelts();
   else if (tabName === 'shop') loadShop();
+  else if (tabName === 'supplies') loadSupplies();
   else if (tabName === 'passes') loadPasses();
   else if (tabName === 'history') loadHistory();
 }
@@ -977,6 +978,79 @@ async function buyItem(itemId, itemName, price) {
   });
 }
 
+// ========== FOURNITURES SCOLAIRES ==========
+
+async function loadSupplies() {
+  const items = await apiCall('/api/supplies');
+  if (!items) return;
+
+  const container = document.getElementById('supply-items');
+  if (!items.length) {
+    container.innerHTML = '<p style="color:var(--text-muted);">Aucune fourniture disponible pour le moment.</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const stockClass = item.stock <= 0 ? 'empty' : item.stock <= 3 ? 'low' : '';
+    const stockText = item.stock <= 0 ? 'Rupture' : item.stock + ' en stock';
+    const disabled = item.stock <= 0 || currentStudent.balance < item.price;
+    return `
+      <div class="supply-card ${item.stock <= 0 ? 'out-of-stock' : ''}">
+        <span class="supply-icon">${item.icon || '📦'}</span>
+        <div class="supply-name">${item.name}</div>
+        <div class="supply-price">${item.price} cc</div>
+        <div class="supply-stock ${stockClass}">${stockText}</div>
+        <button class="supply-buy-btn" ${disabled ? 'disabled' : ''} onclick="orderSupply('${item.id}', '${item.name.replace(/'/g, "\\'")}', ${item.price})">
+          Acheter
+        </button>
+      </div>`;
+  }).join('');
+
+  // Charger mes commandes
+  loadMySupplyOrders();
+}
+
+async function orderSupply(supplyId, name, price) {
+  if (!currentStudent) return;
+  if (currentStudent.balance < price) {
+    notify('Pas assez de centicools !', true);
+    return;
+  }
+  const data = await apiCall('/api/supplies/order', {
+    method: 'POST',
+    body: JSON.stringify({ supply_id: supplyId, student_id: currentStudent.id })
+  });
+  if (data) {
+    notify(data.message);
+    currentStudent.balance -= price;
+    updateBalanceDisplay();
+    loadSupplies();
+  }
+}
+
+async function loadMySupplyOrders() {
+  if (!currentStudent) return;
+  const orders = await apiCall(`/api/supplies/orders/${currentStudent.id}`);
+  if (!orders || !orders.length) {
+    document.getElementById('my-supply-orders').style.display = 'none';
+    return;
+  }
+  document.getElementById('my-supply-orders').style.display = 'block';
+  document.getElementById('supply-orders-list').innerHTML = orders.map(o => `
+    <div class="supply-order">
+      <span>${o.supply_icon || '📦'}</span>
+      <span>${o.supply_name}</span>
+      <span style="color:var(--text-muted); font-size:10px;">${new Date(o.ordered_at).toLocaleDateString('fr-FR')}</span>
+      <span class="order-status ${o.status}">${o.status === 'pending' ? '⏳ En attente' : '✅ Distribue'}</span>
+    </div>
+  `).join('');
+}
+
+function updateBalanceDisplay() {
+  const el = document.getElementById('student-balance');
+  if (el && currentStudent) el.textContent = currentStudent.balance;
+}
+
 // ========== PASSES JEUX ==========
 
 async function loadPasses() {
@@ -1330,6 +1404,7 @@ function showTeacherTab(tabName) {
   else if (tabName === 't-belts') loadBeltManagement();
   else if (tabName === 't-jobs') loadJobManagement();
   else if (tabName === 't-market') loadMarketManagement();
+  else if (tabName === 't-supplies') loadTeacherSupplies();
   else if (tabName === 't-history') loadGlobalHistory();
   else if (tabName === 't-config') loadConfigSection();
 }
@@ -1831,6 +1906,127 @@ async function changeTeacherPin() {
     document.getElementById('config-new-pin').value = '';
   }
 }
+
+// ========== TEACHER: FOURNITURES SCOLAIRES ==========
+
+async function loadTeacherSupplies() {
+  const [items, orders] = await Promise.all([
+    apiCall('/api/supplies'),
+    apiCall('/api/supplies/orders')
+  ]);
+
+  // Liste des articles
+  const listEl = document.getElementById('supply-manage-list');
+  if (items && items.length) {
+    listEl.innerHTML = items.map(item => {
+      const stockClass = item.stock <= 0 ? 'empty' : item.stock <= 3 ? 'low' : '';
+      return `
+        <div class="supply-card">
+          <span class="supply-icon">${item.icon || '📦'}</span>
+          <div class="supply-name">${item.name}</div>
+          <div class="supply-price">${item.price} cc</div>
+          <div class="supply-stock ${stockClass}">${item.stock <= 0 ? 'Rupture' : item.stock + ' en stock'}</div>
+          <div style="display:flex; gap:4px; justify-content:center; margin-top:6px;">
+            <button class="supply-buy-btn" onclick="restockSupply('${item.id}')" title="Restock +5">+5</button>
+            <button class="supply-delete-btn" onclick="deleteSupply('${item.id}')">🗑️</button>
+          </div>
+        </div>`;
+    }).join('');
+  } else {
+    listEl.innerHTML = '<p style="color:var(--text-muted);">Aucun article.</p>';
+  }
+
+  // Commandes
+  if (orders && orders.length) {
+    const pending = orders.filter(o => o.status === 'pending');
+    const delivered = orders.filter(o => o.status === 'delivered');
+
+    document.getElementById('supply-pending-orders').innerHTML = pending.length ?
+      pending.map(o => `
+        <div class="supply-order">
+          <span>${o.supply_icon || '📦'}</span>
+          <strong>${o.student_name}</strong>
+          <span>${o.supply_name}</span>
+          <span style="color:var(--text-muted); font-size:10px;">${new Date(o.ordered_at).toLocaleDateString('fr-FR')}</span>
+          <button class="supply-deliver-btn" onclick="deliverOrder('${o.id}')">✅ Distribuer</button>
+        </div>
+      `).join('') : '<p style="color:var(--text-muted);">Aucune commande en attente.</p>';
+
+    document.getElementById('supply-completed-orders').innerHTML = delivered.length ?
+      delivered.slice(0, 10).map(o => `
+        <div class="supply-order" style="opacity:0.6;">
+          <span>${o.supply_icon || '📦'}</span>
+          <strong>${o.student_name}</strong>
+          <span>${o.supply_name}</span>
+          <span style="font-size:10px;">${new Date(o.delivered_at || o.ordered_at).toLocaleDateString('fr-FR')}</span>
+          <span class="order-status delivered">Distribue</span>
+        </div>
+      `).join('') : '';
+  } else {
+    document.getElementById('supply-pending-orders').innerHTML = '<p style="color:var(--text-muted);">Aucune commande.</p>';
+    document.getElementById('supply-completed-orders').innerHTML = '';
+  }
+}
+
+async function addSupplyItem() {
+  const name = document.getElementById('supply-name').value.trim();
+  const icon = document.getElementById('supply-icon').value.trim() || '📦';
+  const price = Number(document.getElementById('supply-price').value);
+  const stock = Number(document.getElementById('supply-stock').value);
+
+  if (!name || !price) { notify('Nom et prix requis !', true); return; }
+
+  const data = await apiCall('/api/supplies', {
+    method: 'POST',
+    body: JSON.stringify({ name, icon, price, stock })
+  });
+  if (data) {
+    notify('Article ajoute !');
+    document.getElementById('supply-name').value = '';
+    document.getElementById('supply-icon').value = '';
+    document.getElementById('supply-price').value = '';
+    document.getElementById('supply-stock').value = '';
+    loadTeacherSupplies();
+  }
+}
+
+async function restockSupply(id) {
+  const item = await apiCall(`/api/supplies/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stock: 5 }) // will be replaced by actual increment
+  });
+  // Actually we need current stock, let's just use +5 from API
+  // Simpler: re-read and set
+  const items = await apiCall('/api/supplies');
+  const found = items?.find(i => i.id === id);
+  if (found) {
+    await apiCall(`/api/supplies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ stock: found.stock + 5 })
+    });
+    notify('+5 stock !');
+    loadTeacherSupplies();
+  }
+}
+
+async function deleteSupply(id) {
+  const data = await apiCall(`/api/supplies/${id}`, { method: 'DELETE' });
+  if (data) {
+    notify('Article supprime');
+    loadTeacherSupplies();
+  }
+}
+
+async function deliverOrder(id) {
+  const data = await apiCall(`/api/supplies/orders/${id}/deliver`, { method: 'PUT' });
+  if (data) {
+    notify('Commande distribuee !');
+    loadTeacherSupplies();
+  }
+}
+
+// ========== BACKUP ==========
 
 async function backupData() {
   showLoading();
