@@ -36,6 +36,54 @@ async function generateBankerCode() {
   return code;
 }
 
+// Helper: get config value from Firestore
+async function getConfig(key) {
+  const doc = await db.collection('config').doc(key).get();
+  return doc.exists ? doc.data().value : null;
+}
+
+// Helper: set config value in Firestore
+async function setConfig(key, value) {
+  await db.collection('config').doc(key).set({ key, value });
+}
+
+// PASS_TYPES constant
+const PASS_TYPES = {
+  'jeux': { name: 'Passe Jeux', price: 20, icon: '🎮', desc: 'Acces jeux Lego + Salle de jeux' }
+};
+
+// ==================== API CONFIG ====================
+
+app.get('/api/config', async (req, res) => {
+  try {
+    const snap = await db.collection('config').get();
+    const config = {};
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      if (doc.id !== 'teacher_pin') {
+        config[doc.id] = data.value;
+      }
+    }
+    res.json(config);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/config', async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    if (!key || !value) return res.status(400).json({ error: 'Cle et valeur requises' });
+    if (key === 'teacher_pin') return res.status(403).json({ error: 'Utilisez /api/teacher/pin' });
+    await setConfig(key, value);
+    res.json({ message: 'Configuration mise a jour' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ==================== API ÉLÈVES ====================
 
 // Liste tous les élèves (version publique, sans codes)
@@ -383,6 +431,54 @@ app.post('/api/transactions/bulk', async (req, res) => {
   }
 });
 
+// Undo/reverse a transaction
+app.post('/api/transactions/:id/reverse', async (req, res) => {
+  try {
+    const txDoc = await db.collection('transactions').doc(req.params.id).get();
+    if (!txDoc.exists) return res.status(404).json({ error: 'Transaction non trouvee' });
+
+    const txn = txDoc.data();
+    if (txn.is_reversed) return res.status(400).json({ error: 'Transaction deja annulee' });
+
+    // Reverse the balance effect
+    const reverseAmount = (txn.type === 'earn' || txn.type === 'market_sell' || txn.type === 'refund')
+      ? -Math.abs(txn.amount)
+      : Math.abs(txn.amount);
+
+    const batch = db.batch();
+
+    // Update student balance
+    batch.update(db.collection('students').doc(txn.student_id), {
+      balance: FieldValue.increment(reverseAmount)
+    });
+
+    // Mark original transaction as reversed
+    batch.update(db.collection('transactions').doc(req.params.id), {
+      is_reversed: true
+    });
+
+    // Log the reversal as a new transaction
+    batch.set(db.collection('transactions').doc(), {
+      student_id: txn.student_id,
+      amount: txn.amount,
+      type: 'refund',
+      reason: `Annulation: ${txn.reason || 'transaction #' + req.params.id}`,
+      created_by: 'teacher',
+      is_reversed: false,
+      created_at: new Date().toISOString()
+    });
+
+    await batch.commit();
+
+    const updatedDoc = await db.collection('students').doc(txn.student_id).get();
+    const newBalance = updatedDoc.data().balance;
+    res.json({ message: 'Transaction annulee !', balance: newBalance });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ==================== API CEINTURES ====================
 
 app.get('/api/students/:id/belts', async (req, res) => {
@@ -592,6 +688,142 @@ app.put('/api/students/:id/belts/:subjectId/down', async (req, res) => {
   }
 });
 
+// Belt history for a student
+app.get('/api/students/:id/belts/history', async (req, res) => {
+  try {
+    const snap = await db.collection('belt_history')
+      .where('student_id', '==', req.params.id)
+      .get();
+
+    // Fetch subjects and colors for denormalization
+    const [subjectsSnap, colorsSnap] = await Promise.all([
+      db.collection('subjects').get(),
+      db.collection('belt_colors').get()
+    ]);
+
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach(d => { subjectsMap[d.id] = d.data(); });
+    const colorsMap = {};
+    colorsSnap.docs.forEach(d => { colorsMap[d.id] = d.data(); });
+
+    const history = snap.docs.map(doc => {
+      const h = docToObj(doc);
+      const subject = subjectsMap[h.subject_id] || {};
+      const color = colorsMap[h.belt_color_id] || {};
+      return {
+        ...h,
+        subject_name: subject.name,
+        belt_name: color.name,
+        color_hex: color.color_hex
+      };
+    });
+
+    // Sort by achieved_at desc, limit 50
+    history.sort((a, b) => (b.achieved_at || '').localeCompare(a.achieved_at || ''));
+    res.json(history.slice(0, 50));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Set belt to specific level (teacher shortcut)
+app.put('/api/students/:id/belts/:subjectId/set', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const subjectId = req.params.subjectId;
+    const { belt_rank } = req.body;
+
+    // Find target belt by rank
+    const targetSnap = await db.collection('belt_colors').where('rank', '==', belt_rank).limit(1).get();
+    if (targetSnap.empty) return res.status(400).json({ error: 'Rang de ceinture invalide' });
+    const targetBelt = targetSnap.docs[0];
+    const targetBeltData = targetBelt.data();
+
+    const beltDocId = `${studentId}_${subjectId}`;
+    const beltDoc = await db.collection('student_belts').doc(beltDocId).get();
+    if (!beltDoc.exists) return res.status(404).json({ error: 'Ceinture non trouvee' });
+
+    const belt = beltDoc.data();
+    const currentColorDoc = await db.collection('belt_colors').doc(belt.belt_color_id).get();
+    const currentRank = currentColorDoc.data().rank;
+    const direction = belt_rank > currentRank ? 'up' : 'down';
+
+    await db.collection('student_belts').doc(beltDocId).update({
+      belt_color_id: targetBelt.id,
+      achieved_at: new Date().toISOString()
+    });
+
+    // Log in belt_history
+    await db.collection('belt_history').doc().set({
+      student_id: studentId,
+      subject_id: subjectId,
+      belt_color_id: targetBelt.id,
+      direction,
+      achieved_at: new Date().toISOString()
+    });
+
+    res.json({ message: `Ceinture definie a ${targetBeltData.name}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Bulk belt overview (all students, all subjects)
+app.get('/api/belts/overview', async (req, res) => {
+  try {
+    const [studentsSnap, beltsSnap, subjectsSnap, colorsSnap] = await Promise.all([
+      db.collection('students').where('is_active', '==', true).get(),
+      db.collection('student_belts').get(),
+      db.collection('subjects').get(),
+      db.collection('belt_colors').get()
+    ]);
+
+    const activeIds = new Set(studentsSnap.docs.map(d => d.id));
+    const studentsMap = {};
+    studentsSnap.docs.forEach(d => { studentsMap[d.id] = d.data(); });
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach(d => { subjectsMap[d.id] = d.data(); });
+    const colorsMap = {};
+    colorsSnap.docs.forEach(d => { colorsMap[d.id] = d.data(); });
+
+    const data = beltsSnap.docs
+      .filter(doc => activeIds.has(doc.data().student_id))
+      .map(doc => {
+        const b = doc.data();
+        const s = studentsMap[b.student_id] || {};
+        const subject = subjectsMap[b.subject_id] || {};
+        const color = colorsMap[b.belt_color_id] || {};
+        return {
+          student_id: b.student_id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          subject_name: subject.name,
+          subject_category: subject.category,
+          belt_name: color.name,
+          color_hex: color.color_hex,
+          text_hex: color.text_hex,
+          rank: color.rank
+        };
+      });
+
+    // Sort by first_name, then subject_category, then subject_name
+    data.sort((a, b) => {
+      const nameComp = (a.first_name || '').localeCompare(b.first_name || '');
+      if (nameComp !== 0) return nameComp;
+      const catComp = (a.subject_category || '').localeCompare(b.subject_category || '');
+      if (catComp !== 0) return catComp;
+      return (a.subject_name || '').localeCompare(b.subject_name || '');
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/belts/colors', async (req, res) => {
   try {
     const snap = await db.collection('belt_colors').orderBy('rank').get();
@@ -744,6 +976,214 @@ app.post('/api/jobs/pay', async (req, res) => {
     }
 
     res.json({ message: `${count} salaires versés !` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ==================== API PASSES JOURNALIERS ====================
+
+// Get today's passes for a student
+app.get('/api/students/:id/passes', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const snap = await db.collection('daily_passes')
+      .where('student_id', '==', req.params.id)
+      .where('pass_date', '==', today)
+      .get();
+    const passes = snap.docs.map(docToObj);
+    res.json({ passes, pass_types: PASS_TYPES, today });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Get all passes for today (teacher view)
+app.get('/api/passes/today', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const snap = await db.collection('daily_passes')
+      .where('pass_date', '==', today)
+      .get();
+
+    const passes = [];
+    for (const doc of snap.docs) {
+      const p = docToObj(doc);
+      const studentDoc = await db.collection('students').doc(p.student_id).get();
+      if (studentDoc.exists) {
+        const s = studentDoc.data();
+        p.first_name = s.first_name;
+        p.last_name = s.last_name;
+      }
+      passes.push(p);
+    }
+    passes.sort((a, b) => (b.purchased_at || '').localeCompare(a.purchased_at || ''));
+    res.json({ passes, today });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Buy a daily pass
+app.post('/api/passes/buy', async (req, res) => {
+  try {
+    const { student_id, pass_type } = req.body;
+    const passInfo = PASS_TYPES[pass_type];
+    if (!passInfo) return res.status(400).json({ error: 'Type de passe invalide' });
+
+    const studentDoc = await db.collection('students').doc(student_id).get();
+    if (!studentDoc.exists) return res.status(404).json({ error: 'Eleve non trouve' });
+    const student = studentDoc.data();
+
+    if (student.balance < passInfo.price) {
+      return res.status(400).json({ error: `Pas assez de centicools ! Il te faut ${passInfo.price} cc (2 decicools).` });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const existingSnap = await db.collection('daily_passes')
+      .where('student_id', '==', student_id)
+      .where('pass_type', '==', pass_type)
+      .where('pass_date', '==', today)
+      .limit(1)
+      .get();
+    if (!existingSnap.empty) return res.status(400).json({ error: 'Tu as deja ton passe pour aujourd\'hui !' });
+
+    const batch = db.batch();
+    batch.update(db.collection('students').doc(student_id), {
+      balance: FieldValue.increment(-passInfo.price)
+    });
+    batch.set(db.collection('daily_passes').doc(), {
+      student_id,
+      pass_type,
+      pass_date: today,
+      purchased_at: new Date().toISOString()
+    });
+    batch.set(db.collection('transactions').doc(), {
+      student_id,
+      amount: passInfo.price,
+      type: 'spend',
+      reason: `${passInfo.name} du jour`,
+      created_by: 'pass',
+      is_reversed: false,
+      created_at: new Date().toISOString()
+    });
+    await batch.commit();
+
+    const updatedDoc = await db.collection('students').doc(student_id).get();
+    res.json({ message: `${passInfo.name} achete ! Bonne journee de jeux !`, balance: updatedDoc.data().balance });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Buy passes for a group of students (banker/teacher)
+app.post('/api/passes/buy-group', async (req, res) => {
+  try {
+    const { student_ids, pass_type } = req.body;
+    const passInfo = PASS_TYPES[pass_type];
+    if (!passInfo) return res.status(400).json({ error: 'Type de passe invalide' });
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: 'Aucun eleve selectionne' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const results = { success: [], errors: [] };
+
+    for (const sid of student_ids) {
+      const studentDoc = await db.collection('students').doc(sid).get();
+      if (!studentDoc.exists) {
+        results.errors.push({ id: sid, reason: 'Eleve non trouve' });
+        continue;
+      }
+      const student = studentDoc.data();
+
+      if (student.balance < passInfo.price) {
+        results.errors.push({ id: sid, name: student.first_name, reason: 'Pas assez de cc' });
+        continue;
+      }
+
+      const existingSnap = await db.collection('daily_passes')
+        .where('student_id', '==', sid)
+        .where('pass_type', '==', pass_type)
+        .where('pass_date', '==', today)
+        .limit(1)
+        .get();
+      if (!existingSnap.empty) {
+        results.errors.push({ id: sid, name: student.first_name, reason: 'Deja achete' });
+        continue;
+      }
+
+      const batch = db.batch();
+      batch.update(db.collection('students').doc(sid), {
+        balance: FieldValue.increment(-passInfo.price)
+      });
+      batch.set(db.collection('daily_passes').doc(), {
+        student_id: sid,
+        pass_type,
+        pass_date: today,
+        purchased_at: new Date().toISOString()
+      });
+      batch.set(db.collection('transactions').doc(), {
+        student_id: sid,
+        amount: passInfo.price,
+        type: 'spend',
+        reason: `${passInfo.name} du jour`,
+        created_by: 'pass-group',
+        is_reversed: false,
+        created_at: new Date().toISOString()
+      });
+      await batch.commit();
+      results.success.push({ id: sid, name: student.first_name });
+    }
+
+    const msg = results.success.length > 0
+      ? `${results.success.length} passe(s) achete(s) !`
+      : 'Aucun passe achete.';
+    res.json({ message: msg, results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Get students eligible for pass today (balance >= price, no pass yet)
+app.get('/api/passes/eligible/:pass_type', async (req, res) => {
+  try {
+    const passInfo = PASS_TYPES[req.params.pass_type];
+    if (!passInfo) return res.status(400).json({ error: 'Type de passe invalide' });
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get all active students
+    const studentsSnap = await db.collection('students').where('is_active', '==', true).get();
+
+    // Get today's passes for this type
+    const passesSnap = await db.collection('daily_passes')
+      .where('pass_type', '==', req.params.pass_type)
+      .where('pass_date', '==', today)
+      .get();
+    const hasPassSet = new Set(passesSnap.docs.map(d => d.data().student_id));
+
+    const students = studentsSnap.docs.map(doc => {
+      const s = doc.data();
+      const has_pass = hasPassSet.has(doc.id);
+      return {
+        id: doc.id,
+        first_name: s.first_name,
+        last_name: s.last_name,
+        balance: s.balance,
+        class_number: s.class_number || null,
+        avatar_config: s.avatar_config,
+        has_pass,
+        can_buy: s.balance >= passInfo.price && !has_pass
+      };
+    });
+    students.sort((a, b) => (a.first_name || '').localeCompare(b.first_name || ''));
+
+    res.json({ students, price: passInfo.price, today });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -1011,6 +1451,52 @@ app.post('/api/students/:id/pin', async (req, res) => {
   }
 });
 
+// Change student PIN (PUT version - used by student after first login)
+app.put('/api/students/:id/pin', async (req, res) => {
+  try {
+    const { new_pin } = req.body;
+    if (!new_pin || new_pin.length !== 4 || !/^\d{4}$/.test(new_pin)) {
+      return res.status(400).json({ error: 'Le code doit etre 4 chiffres' });
+    }
+    if (new_pin === '0000') {
+      return res.status(400).json({ error: 'Choisis un code different de 0000 !' });
+    }
+    await db.collection('students').doc(req.params.id).update({ pin_code: new_pin });
+    res.json({ message: 'Code PIN change !' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Reset PIN (teacher only) - resets to 0000
+app.put('/api/students/:id/pin/reset', async (req, res) => {
+  try {
+    await db.collection('students').doc(req.params.id).update({ pin_code: '0000' });
+    const doc = await db.collection('students').doc(req.params.id).get();
+    const student = doc.data();
+    res.json({ message: `PIN de ${student.first_name} ${student.last_name} reinitialise a 0000` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Update class number
+app.put('/api/students/:id/number', async (req, res) => {
+  try {
+    const { class_number } = req.body;
+    const cn = class_number ? parseInt(class_number) : null;
+    await db.collection('students').doc(req.params.id).update({ class_number: cn });
+    const doc = await db.collection('students').doc(req.params.id).get();
+    const student = doc.data();
+    res.json({ message: `Numero de ${student.first_name} ${student.last_name} mis a jour` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ==================== EXPORT DES DONNÉES ====================
 
 app.get('/api/export', async (req, res) => {
@@ -1070,14 +1556,34 @@ app.get('/api/export', async (req, res) => {
 });
 
 // ==================== TEACHER AUTH ====================
-const TEACHER_PIN = process.env.TEACHER_PIN || '1234';
 
-app.post('/api/teacher/login', (req, res) => {
-  const { pin } = req.body;
-  if (pin === TEACHER_PIN) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'Code incorrect' });
+app.post('/api/teacher/login', async (req, res) => {
+  try {
+    const { pin } = req.body;
+    const teacherPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
+    if (pin === teacherPin) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: 'Code incorrect' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Change teacher PIN
+app.put('/api/teacher/pin', async (req, res) => {
+  try {
+    const { old_pin, new_pin } = req.body;
+    const currentPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
+    if (old_pin !== currentPin) return res.status(401).json({ error: 'Ancien code incorrect' });
+    if (!new_pin || new_pin.length < 4) return res.status(400).json({ error: 'Nouveau code trop court' });
+    await setConfig('teacher_pin', new_pin);
+    res.json({ message: 'Code professeur modifie !' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -1535,9 +2041,10 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  const teacherPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
   console.log(`\n🏦 COOL School Bank lancé !`);
   console.log(`📍 Ouvre ton navigateur : http://localhost:${PORT}`);
-  console.log(`\n👨‍🏫 Code prof : ${TEACHER_PIN}`);
+  console.log(`\n👨‍🏫 Code prof : ${teacherPin}`);
   console.log(`👦 Code élève par défaut : 0000\n`);
 });

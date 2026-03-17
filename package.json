@@ -1,7 +1,7 @@
 {
-  "name": "cool-school-bank",
+  "name": "cool-la-herse",
   "version": "2.0.0",
-  "description": "Système bancaire COOL pour les écoles - Monnaie virtuelle et avatars pixelisés (Firebase)",
+  "description": "COOL School Bank - La HERSE - Système de ceintures et monnaie virtuelle (Firebase)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
