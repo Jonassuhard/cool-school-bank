@@ -212,7 +212,9 @@ async function seedData() {
         { name: 'Chapeaux', icon: '🎩' },
         { name: 'Accessoires', icon: '✨' },
         { name: 'Fonds', icon: '🖼️' },
-        { name: 'Billets Personnalises', icon: '💰' }
+        { name: 'Billets Personnalises', icon: '💰' },
+        { name: 'Tetes', icon: '🐲' },
+        { name: 'Bordures', icon: '🖼️' }
       ];
 
       const categoryIds = [];
@@ -225,37 +227,84 @@ async function seedData() {
       await catBatch.commit();
 
       const items = [
+        // --- Skins Avatar (5) ---
         { category_id: categoryIds[0], name: 'Peau Bleue', description: 'Colorie ton avatar en bleu !', price: 50, item_type: 'avatar_skin', item_data: '{"color":"#4A90D9"}', is_available: true },
         { category_id: categoryIds[0], name: 'Peau Verte', description: 'Colorie ton avatar en vert !', price: 50, item_type: 'avatar_skin', item_data: '{"color":"#4AD97A"}', is_available: true },
         { category_id: categoryIds[0], name: 'Peau Rose', description: 'Colorie ton avatar en rose !', price: 50, item_type: 'avatar_skin', item_data: '{"color":"#D94A8B"}', is_available: true },
         { category_id: categoryIds[0], name: 'Peau Doree', description: 'Avatar en or pur !', price: 500, item_type: 'avatar_skin', item_data: '{"color":"#FFD700"}', is_available: true },
         { category_id: categoryIds[0], name: 'Peau Arc-en-ciel', description: 'Toutes les couleurs !', price: 2000, item_type: 'avatar_skin', item_data: '{"color":"rainbow"}', is_available: true },
+        // --- Chapeaux (5) ---
         { category_id: categoryIds[1], name: 'Casquette', description: 'Une casquette stylee', price: 100, item_type: 'avatar_hat', item_data: '{"type":"cap"}', is_available: true },
         { category_id: categoryIds[1], name: 'Couronne', description: 'Pour les rois et reines !', price: 800, item_type: 'avatar_hat', item_data: '{"type":"crown"}', is_available: true },
         { category_id: categoryIds[1], name: 'Chapeau Magicien', description: 'Abracadabra !', price: 300, item_type: 'avatar_hat', item_data: '{"type":"wizard"}', is_available: true },
         { category_id: categoryIds[1], name: 'Bandeau Ninja', description: 'Mode ninja active', price: 200, item_type: 'avatar_hat', item_data: '{"type":"ninja"}', is_available: true },
         { category_id: categoryIds[1], name: 'Casque Spatial', description: 'Direction la lune !', price: 1500, item_type: 'avatar_hat', item_data: '{"type":"space"}', is_available: true },
+        // --- Accessoires (4) ---
         { category_id: categoryIds[2], name: 'Lunettes Cool', description: 'Des lunettes de star', price: 150, item_type: 'avatar_accessory', item_data: '{"type":"sunglasses"}', is_available: true },
         { category_id: categoryIds[2], name: 'Etoiles Autour', description: 'Des etoiles brillantes', price: 250, item_type: 'avatar_accessory', item_data: '{"type":"stars"}', is_available: true },
         { category_id: categoryIds[2], name: 'Ailes', description: 'Des petites ailes !', price: 1000, item_type: 'avatar_accessory', item_data: '{"type":"wings"}', is_available: true },
         { category_id: categoryIds[2], name: 'Flammes', description: 'Trop chaud !', price: 600, item_type: 'avatar_accessory', item_data: '{"type":"flames"}', is_available: true },
+        // --- Fonds (4) ---
         { category_id: categoryIds[3], name: 'Fond Galaxie', description: 'L espace infini', price: 200, item_type: 'avatar_background', item_data: '{"type":"galaxy"}', is_available: true },
         { category_id: categoryIds[3], name: 'Fond Foret', description: 'Nature et arbres', price: 150, item_type: 'avatar_background', item_data: '{"type":"forest"}', is_available: true },
         { category_id: categoryIds[3], name: 'Fond Ocean', description: 'Sous la mer', price: 150, item_type: 'avatar_background', item_data: '{"type":"ocean"}', is_available: true },
         { category_id: categoryIds[3], name: 'Fond Lave', description: 'Comme un volcan !', price: 400, item_type: 'avatar_background', item_data: '{"type":"lava"}', is_available: true },
+        // --- Billets Personnalises (5) ---
         { category_id: categoryIds[4], name: 'Design Centicool', description: 'Personnalise tes centicools !', price: 100, item_type: 'cool_design_centicool', item_data: '{}', is_available: true },
         { category_id: categoryIds[4], name: 'Design Decicool', description: 'Personnalise tes decicools !', price: 500, item_type: 'cool_design_decicool', item_data: '{}', is_available: true },
         { category_id: categoryIds[4], name: 'Design Cool', description: 'Personnalise tes cools !', price: 1000, item_type: 'cool_design_cool', item_data: '{}', is_available: true },
         { category_id: categoryIds[4], name: 'Design Super Cool', description: 'Personnalise tes super cools !', price: 5000, item_type: 'cool_design_supercool', item_data: '{}', is_available: true },
-        { category_id: categoryIds[4], name: 'Design Mega Cool', description: 'Personnalise tes mega cools !', price: 7500, item_type: 'cool_design_megacool', item_data: '{}', is_available: true }
+        { category_id: categoryIds[4], name: 'Design Mega Cool', description: 'Personnalise tes mega cools !', price: 7500, item_type: 'cool_design_megacool', item_data: '{}', is_available: true },
+        // --- Tetes (15) ---
+        { category_id: categoryIds[5], name: 'Tete de Loup', description: 'Grrrr ! Le loup feroce !', price: 300, item_type: 'avatar_head', item_data: '{"type":"wolf"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Renard', description: 'Ruse comme un renard !', price: 300, item_type: 'avatar_head', item_data: '{"type":"fox"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Dragon', description: 'Crache du feu !', price: 800, item_type: 'avatar_head', item_data: '{"type":"dragon"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Lion', description: 'Le roi de la jungle !', price: 600, item_type: 'avatar_head', item_data: '{"type":"lion"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Chat', description: 'Miaou ! Trop mignon !', price: 150, item_type: 'avatar_head', item_data: '{"type":"cat"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Panda', description: 'Noir et blanc zen !', price: 250, item_type: 'avatar_head', item_data: '{"type":"panda"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Robot', description: 'Bip bop ! Mode robot !', price: 500, item_type: 'avatar_head', item_data: '{"type":"robot"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Zombie', description: 'Braaains ! Attention !', price: 400, item_type: 'avatar_head', item_data: '{"type":"zombie"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete d Aigle', description: 'Vue percante !', price: 350, item_type: 'avatar_head', item_data: '{"type":"eagle"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Hibou', description: 'Sage comme un hibou !', price: 200, item_type: 'avatar_head', item_data: '{"type":"owl"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Requin', description: 'Les dents de la mer !', price: 700, item_type: 'avatar_head', item_data: '{"type":"shark"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Singe', description: 'Ouh ouh ah ah !', price: 250, item_type: 'avatar_head', item_data: '{"type":"monkey"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Licorne', description: 'Magique et unique !', price: 1500, item_type: 'avatar_head', item_data: '{"type":"unicorn"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Phoenix', description: 'Renaissance eternelle !', price: 3000, item_type: 'avatar_head', item_data: '{"type":"phoenix"}', is_available: true },
+        { category_id: categoryIds[5], name: 'Tete de Demon', description: 'L ombre incarnee !', price: 2000, item_type: 'avatar_head', item_data: '{"type":"demon"}', is_available: true },
+        // --- Bordures (20) ---
+        { category_id: categoryIds[6], name: 'Bordure Rouge', description: 'Un cadre rouge vif !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#FF4444"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Bleue', description: 'Un cadre bleu ocean !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#4488FF"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Verte', description: 'Un cadre vert nature !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#44DD44"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Violette', description: 'Un cadre violet royal !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#AA44FF"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Rose', description: 'Un cadre rose bonbon !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#FF69B4"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Orange', description: 'Un cadre orange energie !', price: 60, item_type: 'avatar_border', item_data: '{"type":"solid","color":"#FF8C00"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Arc-en-ciel', description: 'Toutes les couleurs qui tournent !', price: 360, item_type: 'avatar_border', item_data: '{"type":"rainbow"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Doree', description: 'Un cadre en or massif !', price: 600, item_type: 'avatar_border', item_data: '{"type":"gold"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Argentee', description: 'Un cadre en argent poli !', price: 480, item_type: 'avatar_border', item_data: '{"type":"silver"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Iridescente', description: 'Reflets changeants magiques !', price: 960, item_type: 'avatar_border', item_data: '{"type":"iridescent"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Paillettes', description: 'Ca brille de partout !', price: 720, item_type: 'avatar_border', item_data: '{"type":"sparkle"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Flammes', description: 'Ton avatar est en feu !', price: 840, item_type: 'avatar_border', item_data: '{"type":"flames"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Glace', description: 'Givre et cristaux de glace !', price: 840, item_type: 'avatar_border', item_data: '{"type":"ice"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Dragon', description: 'Ecailles et griffes de dragon !', price: 1200, item_type: 'avatar_border', item_data: '{"type":"dragon"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Neon', description: 'Lumieres neon fluo !', price: 600, item_type: 'avatar_border', item_data: '{"type":"neon"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Pixel', description: 'Style retro pixelise !', price: 240, item_type: 'avatar_border', item_data: '{"type":"pixel"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Galaxie', description: 'Les etoiles autour de toi !', price: 1080, item_type: 'avatar_border', item_data: '{"type":"galaxy"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Lave', description: 'Magma en fusion !', price: 960, item_type: 'avatar_border', item_data: '{"type":"lava"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Legendaire', description: 'La bordure ultime !', price: 3600, item_type: 'avatar_border', item_data: '{"type":"legendary"}', is_available: true },
+        { category_id: categoryIds[6], name: 'Bordure Ombre', description: 'L obscurite t entoure !', price: 1800, item_type: 'avatar_border', item_data: '{"type":"shadow"}', is_available: true }
       ];
 
-      const itemBatch = db.batch();
-      for (const item of items) {
-        itemBatch.set(db.collection('shop_items').doc(), item);
+      // Firestore batch max is 500 ops, we have 58 items - split into 2 batches
+      const batch1 = db.batch();
+      const batch2 = db.batch();
+      for (let i = 0; i < items.length; i++) {
+        const ref = db.collection('shop_items').doc();
+        if (i < 30) batch1.set(ref, items[i]);
+        else batch2.set(ref, items[i]);
       }
-      await itemBatch.commit();
-      console.log('  ✅ Boutique initialisee');
+      await batch1.commit();
+      await batch2.commit();
+      console.log('  ✅ Boutique initialisee (58 articles: skins, chapeaux, accessoires, fonds, billets, tetes, bordures)');
     }
 
     console.log('✅ Seed data check complete - La HERSE');
