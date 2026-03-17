@@ -1527,7 +1527,8 @@ app.get('/api/stats', async (req, res) => {
     // poorest should be sorted asc
     poorest.sort((a, b) => a.balance - b.balance);
 
-    res.json({ totalStudents, totalCool, negativeStudents, richest, poorest });
+    const avgBalance = totalStudents > 0 ? totalCool / totalStudents : 0;
+    res.json({ totalStudents, totalCool, avgBalance, negativeStudents, richest, poorest });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
