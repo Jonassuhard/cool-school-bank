@@ -43,12 +43,11 @@ app.get('/api/students', async (req, res) => {
   try {
     const snap = await db.collection('students')
       .where('is_active', '==', true)
-      .orderBy('first_name')
       .get();
     const students = snap.docs.map(doc => {
       const d = doc.data();
       return { id: doc.id, first_name: d.first_name, last_name: d.last_name, avatar_config: d.avatar_config, balance: d.balance, is_active: d.is_active };
-    });
+    }).sort((a, b) => (a.first_name || '').localeCompare(b.first_name || ''));
     res.json(students);
   } catch (err) {
     console.error(err);
@@ -61,12 +60,11 @@ app.get('/api/students/admin', async (req, res) => {
   try {
     const snap = await db.collection('students')
       .where('is_active', '==', true)
-      .orderBy('first_name')
       .get();
     const students = snap.docs.map(doc => {
       const d = doc.data();
       return { id: doc.id, first_name: d.first_name, last_name: d.last_name, avatar_config: d.avatar_config, pin_code: d.pin_code, banker_code: d.banker_code, balance: d.balance, is_active: d.is_active };
-    });
+    }).sort((a, b) => (a.first_name || '').localeCompare(b.first_name || ''));
     res.json(students);
   } catch (err) {
     console.error(err);
@@ -267,12 +265,11 @@ app.get('/api/students/:id/transactions', async (req, res) => {
     const offset = (page - 1) * limit;
     const snap = await db.collection('transactions')
       .where('student_id', '==', req.params.id)
-      .orderBy('created_at', 'desc')
       .offset(offset)
       .limit(limit)
       .get();
 
-    const transactions = snap.docs.map(docToObj);
+    const transactions = snap.docs.map(docToObj).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
     res.json({ transactions, page, limit, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error(err);
@@ -531,10 +528,9 @@ app.get('/api/students/:id/profile', async (req, res) => {
     // Recent transactions
     const txSnap = await db.collection('transactions')
       .where('student_id', '==', req.params.id)
-      .orderBy('created_at', 'desc')
       .limit(20)
       .get();
-    const transactions = txSnap.docs.map(docToObj);
+    const transactions = txSnap.docs.map(docToObj).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
     // Current job
     const weekStart = getCurrentWeekStart();
@@ -760,10 +756,10 @@ app.get('/api/shop', async (req, res) => {
   try {
     const [catSnap, itemSnap] = await Promise.all([
       db.collection('shop_categories').get(),
-      db.collection('shop_items').where('is_available', '==', true).orderBy('price').get()
+      db.collection('shop_items').where('is_available', '==', true).get()
     ]);
     const categories = catSnap.docs.map(docToObj);
-    const items = itemSnap.docs.map(docToObj);
+    const items = itemSnap.docs.map(docToObj).sort((a, b) => (a.price || 0) - (b.price || 0));
     res.json({ categories, items });
   } catch (err) {
     console.error(err);
@@ -775,7 +771,6 @@ app.get('/api/students/:id/purchases', async (req, res) => {
   try {
     const snap = await db.collection('purchases')
       .where('student_id', '==', req.params.id)
-      .orderBy('purchased_at', 'desc')
       .get();
 
     const purchases = [];
@@ -790,6 +785,7 @@ app.get('/api/students/:id/purchases', async (req, res) => {
       }
       purchases.push(p);
     }
+    purchases.sort((a, b) => (b.purchased_at || '').localeCompare(a.purchased_at || ''));
     res.json(purchases);
   } catch (err) {
     console.error(err);
@@ -858,7 +854,6 @@ app.get('/api/market', async (req, res) => {
   try {
     const snap = await db.collection('market_items')
       .where('is_sold', '==', false)
-      .orderBy('price')
       .get();
 
     const items = [];
@@ -872,6 +867,7 @@ app.get('/api/market', async (req, res) => {
       }
       items.push(mi);
     }
+    items.sort((a, b) => (a.price || 0) - (b.price || 0));
     res.json(items);
   } catch (err) {
     console.error(err);
@@ -1091,9 +1087,8 @@ app.get('/api/fines/rules', async (req, res) => {
   try {
     const snap = await db.collection('fine_rules')
       .where('is_active', '==', true)
-      .orderBy('name')
       .get();
-    res.json(snap.docs.map(docToObj));
+    res.json(snap.docs.map(docToObj).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -1205,8 +1200,6 @@ app.get('/api/auctions/:id', async (req, res) => {
     // Bids
     const bidsSnap = await db.collection('auction_bids')
       .where('auction_id', '==', req.params.id)
-      .orderBy('amount', 'desc')
-      .orderBy('created_at', 'asc')
       .get();
 
     const bids = [];
@@ -1220,6 +1213,7 @@ app.get('/api/auctions/:id', async (req, res) => {
       }
       bids.push(b);
     }
+    bids.sort((a, b) => (b.amount || 0) - (a.amount || 0) || (a.created_at || '').localeCompare(b.created_at || ''));
 
     res.json({ auction, bids });
   } catch (err) {
@@ -1289,12 +1283,11 @@ app.post('/api/auctions/:id/bid', async (req, res) => {
     // Update current price to highest bid
     const allBids = await db.collection('auction_bids')
       .where('auction_id', '==', req.params.id)
-      .orderBy('amount', 'desc')
-      .limit(1)
       .get();
-    if (!allBids.empty) {
+    const sortedBids = allBids.docs.map(doc => doc.data()).sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    if (sortedBids.length > 0) {
       await db.collection('auctions').doc(req.params.id).update({
-        current_price: allBids.docs[0].data().amount
+        current_price: sortedBids[0].amount
       });
     }
 
@@ -1316,7 +1309,6 @@ app.post('/api/auctions/:id/close', async (req, res) => {
 
     const bidsSnap = await db.collection('auction_bids')
       .where('auction_id', '==', req.params.id)
-      .orderBy('amount', 'desc')
       .get();
 
     if (bidsSnap.empty) {
@@ -1340,6 +1332,7 @@ app.post('/api/auctions/:id/close', async (req, res) => {
       }
       topBids.push(b);
     }
+    topBids.sort((a, b) => (b.amount || 0) - (a.amount || 0));
 
     const maxAmount = topBids[0].amount;
     const tiedBidders = topBids.filter(b => b.amount === maxAmount);
