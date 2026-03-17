@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const path = require('path');
 const db = require('./database');
 const { FieldValue } = require('firebase-admin/firestore');
@@ -6,8 +7,105 @@ const { FieldValue } = require('firebase-admin/firestore');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+
+// ==================== SECURITE ====================
+
+// Headers de securite
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Sessions en memoire ---
+const sessions = new Map(); // token -> { role, studentId?, createdAt }
+const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 heures
+
+function createSession(role, studentId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, { role, studentId: studentId || null, createdAt: Date.now() });
+  return token;
+}
+
+function getSession(token) {
+  if (!token) return null;
+  const s = sessions.get(token);
+  if (!s) return null;
+  if (Date.now() - s.createdAt > SESSION_TTL) { sessions.delete(token); return null; }
+  return s;
+}
+
+// Nettoyage des sessions expirees toutes les heures
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, s] of sessions) {
+    if (now - s.createdAt > SESSION_TTL) sessions.delete(token);
+  }
+}, 60 * 60 * 1000);
+
+// --- Rate limiting login ---
+const loginAttempts = new Map(); // ip -> { count, firstAttempt }
+const RATE_LIMIT_MAX = 8;       // 8 essais
+const RATE_LIMIT_WINDOW = 2 * 60 * 1000; // par fenetre de 2 min
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now - entry.firstAttempt > RATE_LIMIT_WINDOW) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) return false;
+  return true;
+}
+
+// Nettoyage rate limit toutes les 5 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) loginAttempts.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
+// --- Middlewares d'authentification ---
+function requireAuth(req, res, next) {
+  const token = req.headers['x-session-token'];
+  const session = getSession(token);
+  if (!session) return res.status(401).json({ error: 'Non authentifie' });
+  req.session = session;
+  next();
+}
+
+function requireTeacher(req, res, next) {
+  const token = req.headers['x-session-token'];
+  const session = getSession(token);
+  if (!session || session.role !== 'teacher') return res.status(403).json({ error: 'Acces reserve au professeur' });
+  req.session = session;
+  next();
+}
+
+function requireTeacherOrBanker(req, res, next) {
+  const token = req.headers['x-session-token'];
+  const session = getSession(token);
+  if (!session || (session.role !== 'teacher' && session.role !== 'banker')) {
+    return res.status(403).json({ error: 'Acces reserve au professeur ou banquier' });
+  }
+  req.session = session;
+  next();
+}
+
+// --- Sanitisation HTML ---
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[<>"'&]/g, c => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '&': '&amp;' }[c]));
+}
 
 // Helper: convert Firestore doc to plain object with id
 function docToObj(doc) {
@@ -71,7 +169,7 @@ app.get('/api/config', async (req, res) => {
   }
 });
 
-app.put('/api/config', async (req, res) => {
+app.put('/api/config', requireTeacher, async (req, res) => {
   try {
     const { key, value } = req.body;
     if (!key || !value) return res.status(400).json({ error: 'Cle et valeur requises' });
@@ -104,7 +202,7 @@ app.get('/api/students', async (req, res) => {
 });
 
 // Liste tous les élèves (version prof, avec codes PIN + banquier)
-app.get('/api/students/admin', async (req, res) => {
+app.get('/api/students/admin', requireTeacher, async (req, res) => {
   try {
     const snap = await db.collection('students')
       .where('is_active', '==', true)
@@ -133,7 +231,7 @@ app.get('/api/students/:id', async (req, res) => {
 });
 
 // Créer un élève
-app.post('/api/students', async (req, res) => {
+app.post('/api/students', requireTeacher, async (req, res) => {
   try {
     const { first_name, last_name, pin_code } = req.body;
     if (!first_name || !last_name) return res.status(400).json({ error: 'Prénom et nom requis' });
@@ -176,7 +274,7 @@ app.post('/api/students', async (req, res) => {
 });
 
 // Créer plusieurs élèves d'un coup
-app.post('/api/students/bulk', async (req, res) => {
+app.post('/api/students/bulk', requireTeacher, async (req, res) => {
   try {
     const { students: studentList } = req.body;
     if (!studentList || !Array.isArray(studentList) || studentList.length === 0) {
@@ -229,7 +327,7 @@ app.post('/api/students/bulk', async (req, res) => {
 });
 
 // Suppression en masse
-app.post('/api/students/bulk-delete', async (req, res) => {
+app.post('/api/students/bulk-delete', requireTeacher, async (req, res) => {
   try {
     const { student_ids } = req.body;
     if (!student_ids || student_ids.length === 0) return res.status(400).json({ error: 'Aucun élève sélectionné' });
@@ -250,6 +348,7 @@ app.post('/api/students/bulk-delete', async (req, res) => {
 // Login élève (par PIN)
 app.post('/api/students/login', async (req, res) => {
   try {
+    if (!checkRateLimit(req.ip)) return res.status(429).json({ error: 'Trop de tentatives ! Attends 2 minutes.' });
     const { id, pin_code } = req.body;
     const doc = await db.collection('students').doc(id).get();
     if (!doc.exists) return res.status(401).json({ error: 'Code PIN incorrect' });
@@ -257,7 +356,8 @@ app.post('/api/students/login', async (req, res) => {
     if (student.pin_code !== pin_code || !student.is_active) {
       return res.status(401).json({ error: 'Code PIN incorrect' });
     }
-    res.json({ id: doc.id, ...student });
+    const token = createSession('student', doc.id);
+    res.json({ id: doc.id, ...student, sessionToken: token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -267,6 +367,7 @@ app.post('/api/students/login', async (req, res) => {
 // Login banquier (par code 5 chiffres)
 app.post('/api/banker/login', async (req, res) => {
   try {
+    if (!checkRateLimit(req.ip)) return res.status(429).json({ error: 'Trop de tentatives ! Attends 2 minutes.' });
     const { code } = req.body;
     const snap = await db.collection('students')
       .where('banker_code', '==', code)
@@ -274,7 +375,9 @@ app.post('/api/banker/login', async (req, res) => {
       .limit(1)
       .get();
     if (snap.empty) return res.status(401).json({ error: 'Code banquier incorrect' });
-    res.json(docToObj(snap.docs[0]));
+    const token = createSession('banker', snap.docs[0].id);
+    const data = docToObj(snap.docs[0]);
+    res.json({ ...data, sessionToken: token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -298,7 +401,7 @@ app.put('/api/students/:id/avatar', async (req, res) => {
 // ==================== API TRANSACTIONS ====================
 
 // Historique d'un élève (avec pagination)
-app.get('/api/students/:id/transactions', async (req, res) => {
+app.get('/api/students/:id/transactions', requireAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
@@ -326,7 +429,7 @@ app.get('/api/students/:id/transactions', async (req, res) => {
 });
 
 // Historique global (prof)
-app.get('/api/transactions/all', async (req, res) => {
+app.get('/api/transactions/all', requireAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
@@ -362,10 +465,11 @@ app.get('/api/transactions/all', async (req, res) => {
 });
 
 // Ajouter/retirer des COOL (prof ou banquier)
-app.post('/api/transactions', async (req, res) => {
+app.post('/api/transactions', requireTeacherOrBanker, async (req, res) => {
   try {
-    const { student_id, amount, type, reason, created_by } = req.body;
+    const { student_id, amount, type, reason: rawReason, created_by } = req.body;
     if (!student_id || !amount || !type) return res.status(400).json({ error: 'Données manquantes' });
+    const reason = sanitize(rawReason || '');
 
     const studentRef = db.collection('students').doc(student_id);
     const studentDoc = await studentRef.get();
@@ -397,9 +501,10 @@ app.post('/api/transactions', async (req, res) => {
 });
 
 // Transaction groupée (donner/retirer à plusieurs élèves)
-app.post('/api/transactions/bulk', async (req, res) => {
+app.post('/api/transactions/bulk', requireTeacherOrBanker, async (req, res) => {
   try {
-    const { student_ids, amount, type, reason, created_by } = req.body;
+    const { student_ids, amount, type, reason: rawReason2, created_by } = req.body;
+    const reason = sanitize(rawReason2 || '');
     const effectiveAmount = (type === 'earn' || type === 'market_sell') ? Math.abs(amount) : -Math.abs(amount);
 
     // Firestore batches max 500 ops; each student = 2 ops (update + insert)
@@ -432,7 +537,7 @@ app.post('/api/transactions/bulk', async (req, res) => {
 });
 
 // Undo/reverse a transaction
-app.post('/api/transactions/:id/reverse', async (req, res) => {
+app.post('/api/transactions/:id/reverse', requireTeacherOrBanker, async (req, res) => {
   try {
     const txDoc = await db.collection('transactions').doc(req.params.id).get();
     if (!txDoc.exists) return res.status(404).json({ error: 'Transaction non trouvee' });
@@ -481,7 +586,7 @@ app.post('/api/transactions/:id/reverse', async (req, res) => {
 
 // ==================== API CEINTURES ====================
 
-app.get('/api/students/:id/belts', async (req, res) => {
+app.get('/api/students/:id/belts', requireAuth, async (req, res) => {
   try {
     const snap = await db.collection('student_belts')
       .where('student_id', '==', req.params.id)
@@ -593,7 +698,7 @@ app.put('/api/students/:id/belts/:subjectId/sublevel', async (req, res) => {
 });
 
 // Profil complet d'un élève (pour vue classe)
-app.get('/api/students/:id/profile', async (req, res) => {
+app.get('/api/students/:id/profile', requireAuth, async (req, res) => {
   try {
     const studentDoc = await db.collection('students').doc(req.params.id).get();
     if (!studentDoc.exists || !studentDoc.data().is_active) {
@@ -888,7 +993,7 @@ app.get('/api/jobs/current', async (req, res) => {
   }
 });
 
-app.post('/api/jobs/assign', async (req, res) => {
+app.post('/api/jobs/assign', requireTeacherOrBanker, async (req, res) => {
   try {
     const { assignments } = req.body;
     const weekStart = getCurrentWeekStart();
@@ -943,7 +1048,7 @@ app.post('/api/jobs/assign', async (req, res) => {
   }
 });
 
-app.post('/api/jobs/pay', async (req, res) => {
+app.post('/api/jobs/pay', requireTeacherOrBanker, async (req, res) => {
   try {
     const weekStart = getCurrentWeekStart();
     const snap = await db.collection('job_assignments')
@@ -1081,7 +1186,7 @@ app.post('/api/passes/buy', async (req, res) => {
 });
 
 // Buy passes for a group of students (banker/teacher)
-app.post('/api/passes/buy-group', async (req, res) => {
+app.post('/api/passes/buy-group', requireTeacherOrBanker, async (req, res) => {
   try {
     const { student_ids, pass_type } = req.body;
     const passInfo = PASS_TYPES[pass_type];
@@ -1207,7 +1312,7 @@ app.get('/api/shop', async (req, res) => {
   }
 });
 
-app.get('/api/students/:id/purchases', async (req, res) => {
+app.get('/api/students/:id/purchases', requireAuth, async (req, res) => {
   try {
     const snap = await db.collection('purchases')
       .where('student_id', '==', req.params.id)
@@ -1421,7 +1526,7 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // Supprimer un élève (soft delete)
-app.delete('/api/students/:id', async (req, res) => {
+app.delete('/api/students/:id', requireTeacher, async (req, res) => {
   try {
     await db.collection('students').doc(req.params.id).update({ is_active: false });
     res.json({ message: 'Élève désactivé' });
@@ -1470,7 +1575,7 @@ app.put('/api/students/:id/pin', async (req, res) => {
 });
 
 // Reset PIN (teacher only) - resets to 0000
-app.put('/api/students/:id/pin/reset', async (req, res) => {
+app.put('/api/students/:id/pin/reset', requireTeacher, async (req, res) => {
   try {
     await db.collection('students').doc(req.params.id).update({ pin_code: '0000' });
     const doc = await db.collection('students').doc(req.params.id).get();
@@ -1483,7 +1588,7 @@ app.put('/api/students/:id/pin/reset', async (req, res) => {
 });
 
 // Update class number
-app.put('/api/students/:id/number', async (req, res) => {
+app.put('/api/students/:id/number', requireTeacher, async (req, res) => {
   try {
     const { class_number } = req.body;
     const cn = class_number ? parseInt(class_number) : null;
@@ -1499,7 +1604,7 @@ app.put('/api/students/:id/number', async (req, res) => {
 
 // ==================== EXPORT DES DONNÉES ====================
 
-app.get('/api/export', async (req, res) => {
+app.get('/api/export', requireTeacher, async (req, res) => {
   try {
     // Students
     const studentsSnap = await db.collection('students').where('is_active', '==', true).get();
@@ -1559,10 +1664,12 @@ app.get('/api/export', async (req, res) => {
 
 app.post('/api/teacher/login', async (req, res) => {
   try {
+    if (!checkRateLimit(req.ip)) return res.status(429).json({ error: 'Trop de tentatives ! Attends 2 minutes.' });
     const { pin } = req.body;
     const teacherPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
     if (pin === teacherPin) {
-      res.json({ success: true });
+      const token = createSession('teacher', null);
+      res.json({ success: true, sessionToken: token });
     } else {
       res.status(401).json({ error: 'Code incorrect' });
     }
@@ -1573,7 +1680,7 @@ app.post('/api/teacher/login', async (req, res) => {
 });
 
 // Change teacher PIN
-app.put('/api/teacher/pin', async (req, res) => {
+app.put('/api/teacher/pin', requireTeacher, async (req, res) => {
   try {
     const { old_pin, new_pin } = req.body;
     const currentPin = await getConfig('teacher_pin') || process.env.TEACHER_PIN || '1234';
@@ -1601,7 +1708,7 @@ app.get('/api/fines/rules', async (req, res) => {
   }
 });
 
-app.post('/api/fines/rules', async (req, res) => {
+app.post('/api/fines/rules', requireTeacher, async (req, res) => {
   try {
     const { name, icon, amount } = req.body;
     if (!name || !amount) return res.status(400).json({ error: 'Nom et montant requis' });
@@ -1618,7 +1725,7 @@ app.post('/api/fines/rules', async (req, res) => {
   }
 });
 
-app.delete('/api/fines/rules/:id', async (req, res) => {
+app.delete('/api/fines/rules/:id', requireTeacher, async (req, res) => {
   try {
     await db.collection('fine_rules').doc(req.params.id).update({ is_active: false });
     res.json({ message: 'Règle supprimée' });
@@ -1628,7 +1735,7 @@ app.delete('/api/fines/rules/:id', async (req, res) => {
   }
 });
 
-app.post('/api/fines/apply', async (req, res) => {
+app.post('/api/fines/apply', requireTeacherOrBanker, async (req, res) => {
   try {
     const { student_ids, rule_id } = req.body;
     if (!student_ids || student_ids.length === 0 || !rule_id) return res.status(400).json({ error: 'Données manquantes' });
@@ -1728,7 +1835,7 @@ app.get('/api/auctions/:id', async (req, res) => {
   }
 });
 
-app.post('/api/auctions', async (req, res) => {
+app.post('/api/auctions', requireTeacher, async (req, res) => {
   try {
     const { name, description, starting_price } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
@@ -1805,7 +1912,7 @@ app.post('/api/auctions/:id/bid', async (req, res) => {
 });
 
 // Close auction
-app.post('/api/auctions/:id/close', async (req, res) => {
+app.post('/api/auctions/:id/close', requireTeacher, async (req, res) => {
   try {
     const auctionDoc = await db.collection('auctions').doc(req.params.id).get();
     if (!auctionDoc.exists || auctionDoc.data().status !== 'open') {
@@ -1886,7 +1993,7 @@ app.post('/api/auctions/:id/close', async (req, res) => {
 });
 
 // Resolve dice tiebreak
-app.post('/api/auctions/:id/dice-resolve', async (req, res) => {
+app.post('/api/auctions/:id/dice-resolve', requireTeacher, async (req, res) => {
   try {
     const { winner_id } = req.body;
     const auctionDoc = await db.collection('auctions').doc(req.params.id).get();

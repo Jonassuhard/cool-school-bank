@@ -3,6 +3,7 @@
 let currentStudent = null;
 let isTeacher = false;
 let isBanker = false;
+let sessionToken = null;
 let allStudents = [];
 let allBeltColors = [];
 let appConfig = {};
@@ -40,6 +41,11 @@ function notify(text, isError = false) {
 
 async function apiCall(url, options = {}) {
   try {
+    if (!options.headers) options.headers = {};
+    if (typeof options.headers === 'object' && !(options.headers instanceof Headers)) {
+      if (sessionToken) options.headers['X-Session-Token'] = sessionToken;
+      if (!options.headers['Content-Type'] && options.body) options.headers['Content-Type'] = 'application/json';
+    }
     const res = await fetch(url, options);
     const data = await res.json();
     if (!res.ok) {
@@ -277,6 +283,7 @@ async function submitPin() {
   });
 
   if (data) {
+    sessionToken = data.sessionToken || null;
     currentStudent = data;
     isTeacher = false;
     isBanker = false;
@@ -389,6 +396,7 @@ async function submitBankerPin() {
   });
 
   if (data) {
+    sessionToken = data.sessionToken || null;
     currentStudent = data;
     isBanker = true;
     isTeacher = false;
@@ -427,6 +435,7 @@ async function submitTeacherPin() {
   });
 
   if (data && data.success) {
+    sessionToken = data.sessionToken || null;
     isTeacher = true;
     isBanker = false;
     currentStudent = null;
@@ -452,6 +461,7 @@ function logout() {
   currentStudent = null;
   isTeacher = false;
   isBanker = false;
+  sessionToken = null;
   showScreen('login-screen');
 }
 
