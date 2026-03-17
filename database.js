@@ -23,7 +23,44 @@ async function deleteCollection(collectionName) {
 // Seed data function - conditional seeding (only if collections are empty)
 async function seedData() {
   try {
-    // Check if data already exists
+    // Toujours verifier les fournitures (ajout independant)
+    {
+      const suppliesSnap = await db.collection('supply_items').limit(1).get();
+      if (suppliesSnap.empty) {
+        console.log('  ✏️ Ajout des fournitures scolaires...');
+        const supplies = [
+          { name: 'Stylo bleu', icon: '🖊️', price: 5, stock: 20 },
+          { name: 'Stylo rouge', icon: '🖊️', price: 5, stock: 15 },
+          { name: 'Stylo vert', icon: '🖊️', price: 5, stock: 15 },
+          { name: 'Crayon a papier', icon: '✏️', price: 3, stock: 30 },
+          { name: 'Gomme', icon: '🧹', price: 4, stock: 20 },
+          { name: 'Taille-crayon', icon: '🔧', price: 4, stock: 15 },
+          { name: 'Colle', icon: '🧴', price: 6, stock: 20 },
+          { name: 'Paire de ciseaux', icon: '✂️', price: 8, stock: 10 },
+          { name: 'Regle 20cm', icon: '📏', price: 5, stock: 15 },
+          { name: 'Regle 30cm', icon: '📏', price: 7, stock: 10 },
+          { name: 'Equerre', icon: '📐', price: 8, stock: 10 },
+          { name: 'Compas', icon: '🔵', price: 10, stock: 8 },
+          { name: 'Surligneur jaune', icon: '🖍️', price: 5, stock: 15 },
+          { name: 'Surligneur rose', icon: '🖍️', price: 5, stock: 15 },
+          { name: 'Feutre fin noir', icon: '🖋️', price: 4, stock: 15 },
+          { name: 'Cahier petit format', icon: '📓', price: 12, stock: 10 },
+          { name: 'Cahier grand format', icon: '📒', price: 15, stock: 10 },
+          { name: 'Pochette de feutres', icon: '🎨', price: 20, stock: 5 },
+          { name: 'Pochette crayons couleur', icon: '🖍️', price: 18, stock: 5 },
+          { name: 'Ardoise + feutre', icon: '📋', price: 15, stock: 8 },
+        ];
+        const batch = db.batch();
+        for (const s of supplies) {
+          const ref = db.collection('supply_items').doc();
+          batch.set(ref, { ...s, created_at: new Date().toISOString() });
+        }
+        await batch.commit();
+        console.log(`    ✅ ${supplies.length} fournitures ajoutees`);
+      }
+    }
+
+    // Check if main data already exists
     const studentsSnap = await db.collection('students').limit(1).get();
     if (!studentsSnap.empty) {
       console.log('  ✅ Donnees existantes detectees, pas de re-seed');
@@ -307,42 +344,6 @@ async function seedData() {
     }
 
     console.log('✅ Seed data check complete - La HERSE');
-    // --- Supply Items (fournitures scolaires) ---
-    {
-      const suppliesSnap = await db.collection('supply_items').limit(1).get();
-      if (suppliesSnap.empty) {
-        console.log('  ✏️ Ajout des fournitures scolaires...');
-        const supplies = [
-          { name: 'Stylo bleu', icon: '🖊️', price: 5, stock: 20 },
-          { name: 'Stylo rouge', icon: '🖊️', price: 5, stock: 15 },
-          { name: 'Stylo vert', icon: '🖊️', price: 5, stock: 15 },
-          { name: 'Crayon a papier', icon: '✏️', price: 3, stock: 30 },
-          { name: 'Gomme', icon: '🧹', price: 4, stock: 20 },
-          { name: 'Taille-crayon', icon: '🔧', price: 4, stock: 15 },
-          { name: 'Colle', icon: '🧴', price: 6, stock: 20 },
-          { name: 'Paire de ciseaux', icon: '✂️', price: 8, stock: 10 },
-          { name: 'Regle 20cm', icon: '📏', price: 5, stock: 15 },
-          { name: 'Regle 30cm', icon: '📏', price: 7, stock: 10 },
-          { name: 'Equerre', icon: '📐', price: 8, stock: 10 },
-          { name: 'Compas', icon: '🔵', price: 10, stock: 8 },
-          { name: 'Surligneur jaune', icon: '🖍️', price: 5, stock: 15 },
-          { name: 'Surligneur rose', icon: '🖍️', price: 5, stock: 15 },
-          { name: 'Feutre fin noir', icon: '🖋️', price: 4, stock: 15 },
-          { name: 'Cahier petit format', icon: '📓', price: 12, stock: 10 },
-          { name: 'Cahier grand format', icon: '📒', price: 15, stock: 10 },
-          { name: 'Pochette de feutres', icon: '🎨', price: 20, stock: 5 },
-          { name: 'Pochette crayons couleur', icon: '🖍️', price: 18, stock: 5 },
-          { name: 'Ardoise + feutre', icon: '📋', price: 15, stock: 8 },
-        ];
-        const batch = db.batch();
-        for (const s of supplies) {
-          const ref = db.collection('supply_items').doc();
-          batch.set(ref, { ...s, created_at: new Date().toISOString() });
-        }
-        await batch.commit();
-        console.log(`    ✅ ${supplies.length} fournitures ajoutees`);
-      }
-    }
 
   } catch (error) {
     console.error('❌ Error seeding data:', error);
