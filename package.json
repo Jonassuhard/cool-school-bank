@@ -1,7 +1,7 @@
 {
   "name": "cool-school-bank",
-  "version": "1.0.0",
-  "description": "Système bancaire COOL pour les écoles - Monnaie virtuelle et avatars pixelisés",
+  "version": "2.0.0",
+  "description": "Système bancaire COOL pour les écoles - Monnaie virtuelle et avatars pixelisés (Firebase)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "better-sqlite3": "^9.4.3"
+    "firebase-admin": "^12.0.0"
   }
 }
